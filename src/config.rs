@@ -252,8 +252,8 @@ impl Serialize for ConfigSeed {
     where
         S: serde::Serializer,
     {
-        if self.seed().is_some() {
-            serializer.serialize_str(&encode_hex(&self.get()))
+        if let Some(seed) = self.seed() {
+            serializer.serialize_str(&encode_hex(&seed))
         } else {
             serializer.serialize_none()
         }
@@ -262,7 +262,7 @@ impl Serialize for ConfigSeed {
 
 /// Manually deserialize a hex string to [u8; 32]
 ///
-/// SAFETY: `panic!`s when hex string is malformed or of odd length 
+/// SAFETY: `panic!`s when hex string is malformed or of odd length
 impl<'de> Deserialize<'de> for ConfigSeed {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
