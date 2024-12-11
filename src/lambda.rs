@@ -1,14 +1,25 @@
 use core::fmt;
 use std::fmt::{Debug, Display};
+use std::marker::PhantomData;
 
-use crate::collidable::{Collider, Particle};
+use crate::collidable::{Collider, Particle, Residue};
+use crate::config;
+use crate::soup::Soup;
 use lambda_calculus::{abs, app, Term, Var};
 
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+
+pub type LambdaSoup =
+    Soup<LambdaParticle, AlchemyCollider, LambdaCollisionOk, LambdaCollisionError>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaParticle {
     expr: Term,
     recursive: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AlchemyCollider {
     rlimit: usize,
     slimit: usize,
@@ -51,23 +62,43 @@ impl LambdaParticle {
     }
 }
 
-impl AlchemyCollider {
-    pub fn reduce_with_limit(&self, expr: &mut Term) -> Result<usize, LambdaCollisionError> {
-        let mut n = 0;
-        for _ in 0..self.rlimit {
-            if expr.reduce(lambda_calculus::HAP, 1) == 0 {
-                break;
-            }
-
-            // WARNING: This is EXTREMELY expensive. Calling max_depth is log(depth), and is done
-            // per reduction step. Remove when possible.
-            let depth = expr.size();
-            if depth > self.slimit {
-                return Err(LambdaCollisionError::ExceedsDepthLimit);
-            }
-            n += 1;
+pub fn reduce_with_limit(
+    expr: &mut Term,
+    rlimit: usize,
+    slimit: usize,
+) -> Result<usize, LambdaCollisionError> {
+    let mut n = 0;
+    for _ in 0..rlimit {
+        if expr.reduce(lambda_calculus::HAP, 1) == 0 {
+            break;
         }
-        Ok(n)
+
+        // WARNING: This is EXTREMELY expensive. Calling max_depth is log(depth), and is done
+        // per reduction step. Remove when possible.
+        let depth = expr.size();
+        if depth > slimit {
+            return Err(LambdaCollisionError::ExceedsDepthLimit);
+        }
+        n += 1;
+    }
+    Ok(n)
+}
+
+impl AlchemyCollider {
+    pub fn from_config(cfg: &config::Reactor) -> Self {
+        Self {
+            rlimit: cfg.reduction_cutoff,
+            slimit: cfg.size_cutoff,
+            disallow_recursive: false,
+            reaction_rules: cfg
+                .rules
+                .iter()
+                .map(|r| lambda_calculus::parse(r, lambda_calculus::Classic).unwrap())
+                .collect(),
+            discard_copy_actions: cfg.discard_copy_actions,
+            discard_identity: cfg.discard_identity,
+            discard_free_variable_expressions: cfg.discard_free_variable_expressions,
+        }
     }
 }
 
@@ -112,7 +143,7 @@ impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for Alche
         for rule in &self.reaction_rules {
             let mut expr = app!(rule.clone(), lt.clone(), rt.clone());
             let size = expr.size();
-            let n = self.reduce_with_limit(&mut expr)?;
+            let n = reduce_with_limit(&mut expr, self.rlimit, self.slimit)?;
 
             if n == self.rlimit {
                 return Err(LambdaCollisionError::ExceedsReductionLimit);
@@ -141,6 +172,19 @@ impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for Alche
             left_size: lt.size(),
             right_size: rt.size(),
         })
+    }
+}
+
+impl Residue<LambdaParticle> for LambdaCollisionOk {
+    fn particles(&self) -> impl Iterator<Item = LambdaParticle> {
+        self.results.iter().map(|expr| LambdaParticle {
+            expr: expr.clone(),
+            recursive: false,
+        })
+    }
+
+    fn count(&self) -> usize {
+        self.results.len()
     }
 }
 
@@ -182,5 +226,42 @@ impl std::error::Error for LambdaCollisionError {}
 impl fmt::Display for LambdaParticle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&format!("{:?}", self.expr), f)
+    }
+}
+
+impl LambdaSoup {
+    /// Generate an empty soup with the following configuration options:
+    pub fn new() -> Self {
+        LambdaSoup::from_config(&config::Reactor::new())
+    }
+
+    /// Generate an empty soup from a given `config` object.
+    pub fn from_config(cfg: &config::Reactor) -> Self {
+        let seed = cfg.seed.get();
+        let rng = ChaCha8Rng::from_seed(seed);
+        Self {
+            expressions: Vec::new(),
+            reduction_limit: cfg.reduction_cutoff,
+            size_limit: cfg.size_cutoff,
+            collider: AlchemyCollider::from_config(cfg),
+            maintain_constant_population_size: cfg.maintain_constant_population_size,
+            discard_parents: cfg.discard_parents,
+            rng,
+            n_collisions: 0,
+            t: PhantomData::<LambdaCollisionOk>,
+            e: PhantomData::<LambdaCollisionError>,
+        }
+    }
+
+    pub fn add_lambda_expressions(&mut self, expressions: impl IntoIterator<Item = Term>) {
+        self.expressions
+            .extend(expressions.into_iter().map(|t| LambdaParticle {
+                expr: t,
+                recursive: false,
+            }))
+    }
+
+    pub fn lambda_expressions(&self) -> impl Iterator<Item = &Term> {
+        self.expressions.iter().map(|e| e.get_underlying_term())
     }
 }
