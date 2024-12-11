@@ -1,21 +1,21 @@
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use crate::soup::Soup;
+use crate::lambda::LambdaSoup;
 use crate::utils::HeapObject;
 
 use lambda_calculus::Term;
 
-impl Soup {
+impl LambdaSoup {
     // This is expensive, quadratic in the number of expressions. It can
     // probably be written to be faster, but it's not a bottleneck right now.
     pub fn unique_expressions(&self) -> HashSet<Term> {
-        HashSet::<Term>::from_iter(self.expressions().cloned())
+        HashSet::<Term>::from_iter(self.lambda_expressions().cloned())
     }
 
     pub fn expression_counts(&self) -> HashMap<Term, u32> {
         let mut map = HashMap::<Term, u32>::new();
-        for expr in self.expressions().cloned() {
+        for expr in self.lambda_expressions().cloned() {
             *map.entry(expr).or_default() += 1
         }
         map
@@ -24,7 +24,7 @@ impl Soup {
     // The use of HeapObject is a code smell, refactor later
     pub fn k_most_frequent_exprs(&self, k: usize) -> Vec<Term> {
         let mut map = HashMap::<&Term, u32>::new();
-        for x in self.expressions() {
+        for x in self.lambda_expressions() {
             *map.entry(x).or_default() += 1;
         }
 
@@ -54,7 +54,7 @@ impl Soup {
         entropy
     }
 
-    pub fn jacard_index(&self, other: &Soup) -> f32 {
+    pub fn jacard_index(&self, other: &LambdaSoup) -> f32 {
         let selfcounts = self.expression_counts();
         let othercounts = other.expression_counts();
 
