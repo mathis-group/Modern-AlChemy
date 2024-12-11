@@ -10,3 +10,11 @@ where
 {
     fn collide(&self, left: P, right: P) -> Result<T, E>;
 }
+
+pub trait Residue<P>
+where
+    P: Particle,
+{
+    fn particles(&self) -> impl Iterator<Item = P>;
+    fn count(&self) -> usize;
+}
