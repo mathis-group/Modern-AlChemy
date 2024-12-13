@@ -3,10 +3,29 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::collidable::{Collider, Particle, Residue};
-
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
+
+pub trait Particle {
+    fn compose(&self, other: &Self) -> Self;
+
+    fn is_isomorphic_to(&self, other: &Self) -> bool;
+}
+
+pub trait Collider<P, T, E>
+where
+    P: Particle,
+{
+    fn collide(&self, left: P, right: P) -> Result<T, E>;
+}
+
+pub trait Residue<P>
+where
+    P: Particle,
+{
+    fn particles(&self) -> impl Iterator<Item = P>;
+    fn count(&self) -> usize;
+}
 
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
