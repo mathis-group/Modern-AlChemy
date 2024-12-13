@@ -4,23 +4,59 @@ use std::error::Error;
 use async_std::task::spawn;
 use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
-use lambda_calculus::{app, parse, term::Notation::Classic, Term};
+use lambda_calculus::{
+    abs, app,
+    combinators::{Y, Z},
+    data::{
+        boolean::{fls, tru},
+        num::church::{add, eq, sub},
+    },
+    parse,
+    term::Notation::Classic,
+    IntoChurchNum,
+    Term::{self, Abs, Var},
+};
 use plotters::prelude::*;
 
 use crate::{
     config,
     generators::BTreeGen,
+    lambda::{reduce_with_limit, LambdaSoup},
     read_inputs,
-    soup::{reduce_with_limit, Soup},
 };
 
-async fn simulate_additive_murder(
+pub async fn look_for_magic() {
+    let mut futures = FuturesUnordered::new();
+    let run_length = 1000000;
+    let polling_interval = 1000;
+    let sample = read_inputs().collect::<Vec<Term>>();
+    for i in 0..1000 {
+        futures.push(spawn(magic_test_test(
+            sample.clone().into_iter().cycle().take(10000),
+            i,
+            run_length,
+            polling_interval,
+        )));
+    }
+
+    print!("Soup, ");
+    println!();
+    while let Some((id, series)) = futures.next().await {
+        print!("{}, ", id);
+        for i in series {
+            print!("{:?}, ", i)
+        }
+        println!();
+    }
+}
+
+async fn magic_test_test(
     sample: impl Iterator<Item = Term>,
     id: usize,
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<usize>) {
-    let mut soup = Soup::from_config(&config::Reactor {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
         discard_identity: false,
@@ -31,11 +67,75 @@ async fn simulate_additive_murder(
         size_cutoff: 1024,
         seed: config::ConfigSeed::new([0; 32]),
     });
-    soup.perturb(sample);
-    let add = parse(r"\m.\n. m ((\m.\n. m (\n.\x.\y. x (n x y)) n) n) (\x.\y.y)", Classic).unwrap();
+    soup.add_lambda_expressions(sample);
+    // 1 + 1 = 2
+    let test = abs(app!(
+        eq(),
+        app!(Var(1), 1.into_church(), 1.into_church()),
+        2.into_church()
+    ));
+
+    let mut i = parse(r"\t. \r. \f. (t f) f r", Classic).unwrap();
+    i = app!(i, test);
+    i.reduce(lambda_calculus::HAP, 0);
+    println!("i: {:?}", i);
+    let mut magic = app!(Z(), i);
+    println!("magic: {:?}", magic);
+    let mut s = app!(magic.clone(), sub());
+    let mut c = app!(magic.clone(), add());
+    // s.reduce(lambda_calculus::NOR, 0);
+    println!("magic pre: {:?}", magic);
+    println!("magic fls pre: {:?}", c);
+    c.reduce(lambda_calculus::HSP, 0);
+    s.reduce(lambda_calculus::HSP, 0);
+    println!("magic fls: {:?}", s);
+    println!("magic add: {:?}", c);
+
+    //  let mut z = parse(r"\r. \a. a (\x. r) (\a. \b. a)", Classic).unwrap();
+    //  z = app!(Z(), z);
+    //  let mut zf = app!(z.clone(), fls());
+    //  let mut zt = app!(z.clone(), tru());
+    //  zf.reduce(lambda_calculus::HSP, 0);
+    //  zt.reduce(lambda_calculus::HSP, 0);
+    //  println!("pre z: {:?}", z);
+    //  z.reduce(lambda_calculus::HSP, 0);
+    //  println!("zf: {:?}", zf);
+    //  println!("z: {:?}", z);
+    //  println!("zt: {:?}", zt);
+
+    (id, vec![])
+}
+
+async fn simulate_additive_murder(
+    sample: impl Iterator<Item = Term>,
+    id: usize,
+    run_length: usize,
+    polling_interval: usize,
+) -> (usize, Vec<usize>) {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
+        rules: vec![String::from("\\x.\\y.x y")],
+        discard_copy_actions: false,
+        discard_identity: false,
+        discard_free_variable_expressions: true,
+        maintain_constant_population_size: true,
+        discard_parents: false,
+        reduction_cutoff: 512,
+        size_cutoff: 1024,
+        seed: config::ConfigSeed::new([0; 32]),
+    });
+    soup.add_lambda_expressions(sample);
+    let add = parse(
+        r"\m.\n. m ((\m.\n. m (\n.\x.\y. x (n x y)) n) n) (\x.\y.y)",
+        Classic,
+    )
+    .unwrap();
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
-            (s.collisions(), s.expressions().any(|e| e.is_isomorphic_to(&add)))
+            (
+                s.collisions(),
+                s.expressions()
+                    .any(|e| e.get_underlying_term().is_isomorphic_to(&add)),
+            )
         });
     (id, check_series)
 }
@@ -71,7 +171,7 @@ pub fn one_sample_with_dist() {
     let polls = run_length / polling_interval;
     let sample = read_inputs().collect::<Vec<Term>>();
 
-    let mut soup = Soup::from_config(&config::Reactor {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
         discard_identity: false,
@@ -82,7 +182,7 @@ pub fn one_sample_with_dist() {
         size_cutoff: 1024,
         seed: config::ConfigSeed::new([0; 32]),
     });
-    soup.perturb(sample.into_iter().cycle().take(10000));
+    soup.add_lambda_expressions(sample.into_iter().cycle().take(10000));
     let counts = soup.simulate_and_poll(run_length, polling_interval, false, |s| {
         s.expression_counts()
     });
@@ -209,7 +309,7 @@ async fn simulate_soup_murder(
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<Option<(Term, Term)>>) {
-    let mut soup = Soup::from_config(&config::Reactor {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
         discard_identity: false,
@@ -220,7 +320,7 @@ async fn simulate_soup_murder(
         size_cutoff: 1024,
         seed: config::ConfigSeed::new([0; 32]),
     });
-    soup.perturb(sample);
+    soup.add_lambda_expressions(sample);
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
             let bests = s.k_most_frequent_exprs(10);
@@ -268,8 +368,8 @@ async fn simulate_soup(
     sample: impl Iterator<Item = Term>,
     id: usize,
     run_length: usize,
-) -> (Soup, usize, f32) {
-    let mut soup = Soup::from_config(&config::Reactor {
+) -> (LambdaSoup, usize, f32) {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
         discard_identity: false,
@@ -280,7 +380,7 @@ async fn simulate_soup(
         size_cutoff: 1024,
         seed: config::ConfigSeed::new([0; 32]),
     });
-    soup.perturb(sample);
+    soup.add_lambda_expressions(sample);
     let n_successes = soup.simulate_for(run_length, false);
     let failure_rate = 1f32 - n_successes as f32 / run_length as f32;
     (soup, id, failure_rate)
@@ -296,7 +396,7 @@ async fn simulate_soup_and_produce_entropies(
     let bytes = id.to_le_bytes();
     seed[..bytes.len()].copy_from_slice(&bytes);
 
-    let mut soup = Soup::from_config(&config::Reactor {
+    let mut soup = LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
         discard_identity: false,
@@ -307,8 +407,8 @@ async fn simulate_soup_and_produce_entropies(
         size_cutoff: 1024,
         seed: config::ConfigSeed::new(seed),
     });
-    soup.perturb(sample);
-    let data = soup.simulate_and_poll(run_length, polling_interval, false, |s: &Soup| {
+    soup.add_lambda_expressions(sample);
+    let data = soup.simulate_and_poll(run_length, polling_interval, false, |s: &LambdaSoup| {
         s.population_entropy()
     });
     (id, data)
@@ -386,7 +486,7 @@ pub fn sync_entropy_test() {
 
     for i in 0..100 {
         let sample = gen.generate_n(1000);
-        let mut soup = Soup::from_config(&config::Reactor {
+        let mut soup = LambdaSoup::from_config(&config::Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,
@@ -397,7 +497,7 @@ pub fn sync_entropy_test() {
             size_cutoff: 1024,
             seed: config::ConfigSeed::new([0; 32]),
         });
-        soup.perturb(sample);
+        soup.add_lambda_expressions(sample);
         soup.simulate_for(100000, false);
         let entropy = soup.population_entropy();
         println!("{}: {}", i, entropy);
