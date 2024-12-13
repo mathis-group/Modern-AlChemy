@@ -2,9 +2,8 @@ use core::fmt;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-use crate::collidable::{Collider, Particle, Residue};
 use crate::config;
-use crate::soup::Soup;
+use crate::supercollider::{Collider, Particle, Residue, Soup};
 use lambda_calculus::{abs, app, Term, Var};
 
 use rand::SeedableRng;
