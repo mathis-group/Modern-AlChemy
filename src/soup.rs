@@ -16,8 +16,6 @@ pub struct Soup<P, C, T, E> {
     pub(crate) expressions: Vec<P>,
     pub(crate) n_collisions: usize,
     pub(crate) collider: C,
-    pub(crate) reduction_limit: usize,
-    pub(crate) size_limit: usize,
 
     pub(crate) maintain_constant_population_size: bool,
     pub(crate) discard_parents: bool,

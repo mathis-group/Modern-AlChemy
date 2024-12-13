@@ -241,15 +241,13 @@ impl LambdaSoup {
         let rng = ChaCha8Rng::from_seed(seed);
         Self {
             expressions: Vec::new(),
-            reduction_limit: cfg.reduction_cutoff,
-            size_limit: cfg.size_cutoff,
             collider: AlchemyCollider::from_config(cfg),
             maintain_constant_population_size: cfg.maintain_constant_population_size,
             discard_parents: cfg.discard_parents,
             rng,
             n_collisions: 0,
-            t: PhantomData::<LambdaCollisionOk>,
-            e: PhantomData::<LambdaCollisionError>,
+            t: PhantomData,
+            e: PhantomData,
         }
     }
 
