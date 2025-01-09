@@ -15,13 +15,16 @@ mod config;
 mod generators;
 
 /// Main AlChemy simulation module
-mod soup;
+mod supercollider;
 
 /// Experimental stuff
 mod experiments;
 
 /// Utilities
 mod utils;
+
+/// Lambda-calculus stuff
+mod lambda;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Experiment {
@@ -33,6 +36,7 @@ pub enum Experiment {
     EntropySeries,
     SampleSimulate,
     SampleScan,
+    MagicTestFunction,
 }
 
 #[derive(Parser, Debug)]
@@ -126,7 +130,7 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
     expressions.into_iter()
 }
 
-pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> soup::Soup {
+pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::LambdaSoup {
     let expressions = match &cfg.generator_config {
         config::Generator::BTree(gen_cfg) => {
             let mut gen = generators::BTreeGen::from_config(gen_cfg);
@@ -139,8 +143,8 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> soup::Soup {
                 .collect::<Vec<Term>>()
         }
     };
-    let mut soup = soup::Soup::from_config(&cfg.reactor_config);
-    soup.perturb(expressions);
+    let mut soup = lambda::LambdaSoup::from_config(&cfg.reactor_config);
+    soup.add_lambda_expressions(expressions);
     soup
 }
 
@@ -175,6 +179,9 @@ fn main() -> std::io::Result<()> {
             Experiment::AdditionSearch => {
                 block_on(experiments::look_for_add());
             }
+            Experiment::MagicTestFunction => {
+                block_on(experiments::look_for_magic());
+            }
             Experiment::SyncEntropyTest => experiments::sync_entropy_test(),
             Experiment::SampleScan => experiments::one_sample_with_dist(),
             Experiment::XorsetSearch => {
@@ -194,9 +201,9 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut soup = if cli.read_stdin {
-        let mut soup = soup::Soup::from_config(&config.reactor_config);
+        let mut soup = lambda::LambdaSoup::from_config(&config.reactor_config);
         let expressions = read_inputs();
-        soup.perturb(expressions);
+        soup.add_lambda_expressions(expressions);
         soup
     } else {
         generate_expressions_and_seed_soup(&config)

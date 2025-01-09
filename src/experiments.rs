@@ -217,7 +217,7 @@ pub fn one_sample_with_dist() {
 
 pub async fn simulate_sample() {
     let mut futures = FuturesUnordered::new();
-    let run_length = 10000000;
+    let run_length = 1000000;
     let polling_interval = 1000;
     let polls = run_length / polling_interval;
     let sample = read_inputs().collect::<Vec<Term>>();

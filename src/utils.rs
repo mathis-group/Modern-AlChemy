@@ -33,7 +33,6 @@ pub fn encode_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeHexError {
     OddLength,
