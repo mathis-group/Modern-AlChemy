@@ -23,6 +23,6 @@
     "maintain_constant_population_size": true,
     "reduction_cutoff": 500,
     "size_cutoff": 1000,
-    "seed": null
+    "seed": null 
   }
 }
