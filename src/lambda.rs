@@ -99,50 +99,53 @@ impl AlchemyCollider {
             discard_free_variable_expressions: cfg.discard_free_variable_expressions,
         }
     }
-}
 
-impl Particle for LambdaParticle {
-    fn compose(&self, other: &Self) -> Self {
-        LambdaParticle {
-            expr: lambda_calculus::app!(self.expr.clone(), other.expr.clone()),
-            recursive: false,
-        }
-    }
-
-    fn is_isomorphic_to(&self, other: &Self) -> bool {
-        self.expr.is_isomorphic_to(&other.expr)
-    }
-}
-
-impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for AlchemyCollider {
-    /// Return the result of ((`rule` `left`) `right`), up to a limit of
-    /// `self.reduction_limit`.
-    fn collide(
+    fn recursive_collide(
         &self,
         left: LambdaParticle,
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
+        assert!(left.recursive);
+        let lt = left.expr;
+        let rt = right.expr;
         if right.recursive {
             return Err(LambdaCollisionError::RecursiveArgument);
         }
 
-        let mut lt = left.expr.clone();
+        let mut expr = app!(lt.clone(), rt.clone());
+        let n = reduce_with_limit(&mut expr, self.rlimit, self.slimit)?;
+
+        let result = if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
+            rt.clone()
+        } else {
+            lt.clone()
+        };
+        Ok(LambdaCollisionOk {
+            results: vec![result],
+            reductions: vec![n],
+            sizes: vec![expr.size()],
+            left_size: lt.size(),
+            right_size: rt.size(),
+        })
+    }
+
+    fn nonrecursive_collide(
+        &self,
+        left: LambdaParticle,
+        right: LambdaParticle,
+    ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
+        assert!(!left.recursive);
+        let lt = left.expr;
         let rt = right.expr;
-
-        if left.recursive {
-            if self.disallow_recursive {
-                return Err(LambdaCollisionError::RecursiveArgument);
-            }
-            lt = left.expr.unabs().unwrap();
+        if right.recursive {
+            return Err(LambdaCollisionError::RecursiveArgument);
         }
-
-        // Record collision information
         let mut collision_results = Vec::with_capacity(self.reaction_rules.len());
 
         for rule in &self.reaction_rules {
             let mut expr = app!(rule.clone(), lt.clone(), rt.clone());
-            let size = expr.size();
             let n = reduce_with_limit(&mut expr, self.rlimit, self.slimit)?;
+            let size = expr.size();
 
             if n == self.rlimit {
                 return Err(LambdaCollisionError::ExceedsReductionLimit);
@@ -171,6 +174,35 @@ impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for Alche
             left_size: lt.size(),
             right_size: rt.size(),
         })
+    }
+}
+
+impl Particle for LambdaParticle {
+    fn compose(&self, other: &Self) -> Self {
+        LambdaParticle {
+            expr: lambda_calculus::app!(self.expr.clone(), other.expr.clone()),
+            recursive: false,
+        }
+    }
+
+    fn is_isomorphic_to(&self, other: &Self) -> bool {
+        self.expr.is_isomorphic_to(&other.expr)
+    }
+}
+
+impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for AlchemyCollider {
+    /// Return the result of ((`rule` `left`) `right`), up to a limit of
+    /// `self.reduction_limit`.
+    fn collide(
+        &self,
+        left: LambdaParticle,
+        right: LambdaParticle,
+    ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
+        return if left.recursive {
+            self.recursive_collide(left, right)
+        } else {
+            self.nonrecursive_collide(left, right)
+        };
     }
 }
 
