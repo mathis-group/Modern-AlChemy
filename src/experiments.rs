@@ -6,15 +6,12 @@ use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
     abs, app,
-    combinators::{Y, Z},
-    data::{
-        boolean::{fls, tru},
-        num::church::{add, eq, sub},
-    },
+    combinators::Z,
+    data::num::church::{add, eq, sub},
     parse,
     term::Notation::Classic,
     IntoChurchNum,
-    Term::{self, Abs, Var},
+    Term::{self, Var},
 };
 use plotters::prelude::*;
 
@@ -24,6 +21,61 @@ use crate::{
     lambda::{reduce_with_limit, LambdaSoup},
     read_inputs,
 };
+
+pub fn test_add(a: usize, b: usize) -> Term {
+    let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
+    test = app!(
+        test,
+        eq(),
+        a.into_church(),
+        b.into_church(),
+        (a + b).into_church()
+    );
+    // `test` has type (church -> church -> church) -> bool
+    test.reduce(lambda_calculus::HAP, 0);
+    println!("add test: {:?}", test);
+    test
+}
+
+pub fn test_succ(a: usize) -> Term {
+    let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
+    test = app!(test, eq(), a.into_church(), (a + 1).into_church());
+    // `test` has type (church -> church) -> bool
+    test.reduce(lambda_calculus::HAP, 0);
+    println!("successor test: {:?}", test);
+    test
+}
+
+pub fn test_sub(a: usize, b: usize) -> Term {
+    let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
+    test = app!(
+        test,
+        eq(),
+        a.into_church(),
+        b.into_church(),
+        (a - b).into_church()
+    );
+    // `test` has type (church -> church -> church) -> bool
+    test.reduce(lambda_calculus::HAP, 0);
+    println!("subtraction test: {:?}", test);
+    test
+}
+
+pub fn test_pred(a: usize) -> Term {
+    let mut test = parse(r"\eq. \a. \apred. \f. (eq (f a) apred)", Classic).unwrap();
+    test = app!(test, eq(), a.into_church(), (a - 1).into_church());
+    // `test` has type (church -> church) -> bool
+    test.reduce(lambda_calculus::HAP, 0);
+    println!("pred test: {:?}", test);
+    test
+}
+
+pub fn test_add_reduction() -> Term {
+    let mut comp = app!(test_add(1, 2), add());
+    comp.reduce(lambda_calculus::HAP, 0);
+    println!("add reduction: {:?}", comp);
+    comp
+}
 
 pub async fn look_for_magic() {
     let mut futures = FuturesUnordered::new();

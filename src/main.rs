@@ -37,6 +37,7 @@ pub enum Experiment {
     SampleSimulate,
     SampleScan,
     MagicTestFunction,
+    MagicTestConstruct,
 }
 
 #[derive(Parser, Debug)]
@@ -195,6 +196,13 @@ fn main() -> std::io::Result<()> {
             }
             Experiment::SampleSimulate => {
                 block_on(experiments::simulate_sample());
+            }
+            Experiment::MagicTestConstruct => {
+                experiments::test_succ(0);
+                experiments::test_add(1, 2);
+                experiments::test_pred(1);
+                experiments::test_sub(1, 1);
+                experiments::test_add_reduction();
             }
         }
         return Ok(());
