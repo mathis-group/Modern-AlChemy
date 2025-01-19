@@ -290,7 +290,21 @@ impl LambdaSoup {
             }))
     }
 
+    pub fn add_test_expressions(&mut self, expressions: impl IntoIterator<Item = Term>) {
+        self.expressions
+            .extend(expressions.into_iter().map(|t| LambdaParticle {
+                expr: t,
+                recursive: true,
+            }))
+    }
+
     pub fn lambda_expressions(&self) -> impl Iterator<Item = &Term> {
         self.expressions.iter().map(|e| e.get_underlying_term())
+    }
+
+    pub fn population_of(&self, item: &Term) -> usize {
+        self.lambda_expressions()
+            .filter(|p| p.is_isomorphic_to(item))
+            .count()
     }
 }
