@@ -223,6 +223,7 @@ where
         self.expressions.len()
     }
 
+    /// Get the number of successful collisions
     pub fn collisions(&self) -> usize {
         self.n_collisions
     }
