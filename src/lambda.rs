@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use crate::config;
 use crate::supercollider::{Collider, Particle, Residue, Soup};
+use lambda_calculus::data::num::church::add;
 use lambda_calculus::{abs, app, Term, Var};
 
 use rand::SeedableRng;
@@ -33,7 +34,7 @@ pub struct AlchemyCollider {
 /// the expressions A and B.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaCollisionOk {
-    pub results: Vec<Term>,
+    pub results: Vec<LambdaParticle>,
     pub reductions: Vec<usize>,
     pub sizes: Vec<usize>,
 
@@ -58,6 +59,10 @@ pub enum LambdaCollisionError {
 impl LambdaParticle {
     pub fn get_underlying_term(&self) -> &Term {
         &self.expr
+    }
+
+    pub fn is_recursive(&self) -> bool {
+        self.recursive
     }
 }
 
@@ -106,27 +111,32 @@ impl AlchemyCollider {
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
         assert!(left.recursive);
-        let lt = left.expr;
-        let rt = right.expr;
-        if right.recursive {
-            return Err(LambdaCollisionError::RecursiveArgument);
-        }
+        let lt = left.expr.clone();
+        let rt = right.expr.clone();
 
         let mut expr = app!(lt.clone(), rt.clone());
         let n = reduce_with_limit(&mut expr, self.rlimit, self.slimit)?;
 
-        let result = if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
-            rt.clone()
+        if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
+            if rt.is_isomorphic_to(&add()) {
+                println!("{}", rt)
+            }
+            Ok(LambdaCollisionOk {
+                results: vec![right.clone(); 100],
+                reductions: vec![n],
+                sizes: vec![expr.size()],
+                left_size: lt.size(),
+                right_size: rt.size(),
+            })
         } else {
-            lt.clone()
-        };
-        Ok(LambdaCollisionOk {
-            results: vec![result],
-            reductions: vec![n],
-            sizes: vec![expr.size()],
-            left_size: lt.size(),
-            right_size: rt.size(),
-        })
+            Ok(LambdaCollisionOk {
+                results: vec![left],
+                reductions: vec![n],
+                sizes: vec![expr.size()],
+                left_size: lt.size(),
+                right_size: rt.size(),
+            })
+        }
     }
 
     fn nonrecursive_collide(
@@ -164,6 +174,11 @@ impl AlchemyCollider {
             if expr.has_free_variables() && self.discard_free_variable_expressions {
                 return Err(LambdaCollisionError::HasFreeVariables);
             }
+
+            let expr = LambdaParticle {
+                expr,
+                recursive: false,
+            };
 
             collision_results.push((expr, size, n))
         }
@@ -208,10 +223,7 @@ impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for Alche
 
 impl Residue<LambdaParticle> for LambdaCollisionOk {
     fn particles(&self) -> impl Iterator<Item = LambdaParticle> {
-        self.results.iter().map(|expr| LambdaParticle {
-            expr: expr.clone(),
-            recursive: false,
-        })
+        self.results.iter().cloned()
     }
 
     fn count(&self) -> usize {

@@ -181,7 +181,7 @@ fn main() -> std::io::Result<()> {
                 block_on(experiments::look_for_add());
             }
             Experiment::MagicTestFunction => {
-                block_on(experiments::look_for_magic());
+                block_on(experiments::add_search_with_test());
             }
             Experiment::SyncEntropyTest => experiments::sync_entropy_test(),
             Experiment::SampleScan => experiments::one_sample_with_dist(),
@@ -198,10 +198,6 @@ fn main() -> std::io::Result<()> {
                 block_on(experiments::simulate_sample());
             }
             Experiment::MagicTestConstruct => {
-                experiments::test_succ(0);
-                experiments::test_add(1, 2);
-                experiments::test_pred(1);
-                experiments::test_sub(1, 1);
                 experiments::test_add_reduction();
             }
         }
