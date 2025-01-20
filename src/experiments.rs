@@ -5,12 +5,15 @@ use async_std::task::spawn;
 use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
-    app,
-    data::num::church::{add, eq},
+    abs, app,
+    data::{
+        boolean::{self, and},
+        num::church::{add, eq},
+    },
     parse,
     term::Notation::Classic,
     IntoChurchNum,
-    Term::{self},
+    Term::{self, Abs},
 };
 use plotters::prelude::*;
 use rand::random;
@@ -46,7 +49,24 @@ pub fn test_add(a: usize, b: usize) -> Term {
         (a + b).into_church()
     );
     // `test` has type (church -> church -> church) -> bool
-    test.reduce(lambda_calculus::HAP, 0);
+    test.reduce(lambda_calculus::NOR, 0);
+    test
+}
+
+pub fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
+    let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
+    for (u, v) in pairs {
+        let gut = parse(
+            r"\and. \test. \testadd. \f. and (test f) (testadd f)",
+            Classic,
+        )
+        .unwrap();
+        test = app!(gut, and(), test, test_add(u, v));
+    }
+    test.reduce(lambda_calculus::NOR, 0);
+    let mut comp = app!(test.clone(), add());
+    comp.reduce(lambda_calculus::NOR, 0);
+    assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
 }
 
@@ -54,7 +74,7 @@ pub fn test_succ(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a + 1).into_church());
     // `test` has type (church -> church) -> bool
-    test.reduce(lambda_calculus::HAP, 0);
+    test.reduce(lambda_calculus::NOR, 0);
     test
 }
 
@@ -68,7 +88,7 @@ pub fn test_sub(a: usize, b: usize) -> Term {
         (a - b).into_church()
     );
     // `test` has type (church -> church -> church) -> bool
-    test.reduce(lambda_calculus::HAP, 0);
+    test.reduce(lambda_calculus::NOR, 0);
     test
 }
 
@@ -76,13 +96,13 @@ pub fn test_pred(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \apred. \f. (eq (f a) apred)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a - 1).into_church());
     // `test` has type (church -> church) -> bool
-    test.reduce(lambda_calculus::HAP, 0);
+    test.reduce(lambda_calculus::NOR, 0);
     test
 }
 
 pub fn test_add_reduction() -> Term {
     let mut comp = app!(test_add(1, 2), add());
-    comp.reduce(lambda_calculus::HAP, 0);
+    comp.reduce(lambda_calculus::NOR, 0);
     println!("add reduction: {:?}", comp);
     comp
 }
@@ -94,10 +114,13 @@ pub async fn add_search_with_test() {
     let sample = read_inputs().collect::<Vec<Term>>();
     for i in 0..100 {
         let distribution = sample.clone().into_iter().cycle().take(4500);
-        let tests = (0..5000).map(|_| {
-            let u = random::<usize>() % 10;
-            let v = random::<usize>() % 10;
-            test_add(u, v)
+        let tests = (0..500).map(|_| {
+            let test = test_add_seq((0..5).map(|_| {
+                let u = random::<usize>() % 20;
+                let v = random::<usize>() % 20;
+                (u, v)
+            }));
+            test
         });
         futures.push(spawn(add_magic_tests(
             distribution,
@@ -125,12 +148,15 @@ async fn add_magic_tests(
     id: usize,
     run_length: usize,
     polling_interval: usize,
-) -> (usize, Vec<usize>) {
-    let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
+) -> (usize, Vec<(usize, usize)>) {
+    let mut soup = experiment_soup(ConfigSeed::new([1; 32]));
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
     let populations = soup.simulate_and_poll(run_length, polling_interval, false, |s| {
-        s.population_of(&add())
+        (
+            s.expressions().filter(|e| e.is_recursive()).count(),
+            s.population_of(&add()),
+        )
     });
     (id, populations)
 }
