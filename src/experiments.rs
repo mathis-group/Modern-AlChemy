@@ -33,8 +33,8 @@ pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
         discard_free_variable_expressions: true,
         maintain_constant_population_size: true,
         discard_parents: false,
-        reduction_cutoff: 512,
-        size_cutoff: 1024,
+        reduction_cutoff: 8000,
+        size_cutoff: 1000,
         seed,
     })
 }
@@ -101,11 +101,12 @@ pub fn test_pred(a: usize) -> Term {
 }
 
 pub fn test_add_reduction() -> Term {
-    let mut comp = app!(test_add(1, 2), add());
-    comp.reduce(lambda_calculus::NOR, 0);
-    println!("add reduction: {:?}", comp);
+    let mut comp = app!(test_add(20, 20), add());
+    let n = comp.reduce(lambda_calculus::NOR, 0);
+    println!("add reduction in {n} steps: {comp}");
     comp
 }
+
 
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
@@ -113,8 +114,8 @@ pub async fn add_search_with_test() {
     let polling_interval = 1000;
     let sample = read_inputs().collect::<Vec<Term>>();
     for i in 0..100 {
-        let distribution = sample.clone().into_iter().cycle().take(4500);
-        let tests = (0..500).map(|_| {
+        let distribution = sample.clone().into_iter().cycle().take(4000);
+        let tests = (0..1000).map(|_| {
             let test = test_add_seq((0..5).map(|_| {
                 let u = random::<usize>() % 20;
                 let v = random::<usize>() % 20;
@@ -152,12 +153,26 @@ async fn add_magic_tests(
     let mut soup = experiment_soup(ConfigSeed::new([1; 32]));
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
-    let populations = soup.simulate_and_poll(run_length, polling_interval, false, |s| {
-        (
-            s.expressions().filter(|e| e.is_recursive()).count(),
-            s.population_of(&add()),
-        )
-    });
+    let mut populations = Vec::new();
+    for _ in 0..100 {
+        let pops = soup.simulate_and_poll(run_length, polling_interval / 100, false, |s| {
+            (
+                s.expressions().filter(|e| e.is_recursive()).count(),
+                s.population_of(&add()),
+            )
+        });
+        populations.extend(pops);
+        let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
+        let tests = (0..n_remaining).map(|_| {
+            let test = test_add_seq((0..5).map(|_| {
+                let u = random::<usize>() % 20;
+                let v = random::<usize>() % 20;
+                (u, v)
+            }));
+            test
+        });
+        soup.add_test_expressions(tests);
+    }
     (id, populations)
 }
 
