@@ -5,15 +5,15 @@ use async_std::task::spawn;
 use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
-    abs, app,
+    app,
     data::{
         boolean::{self, and},
-        num::church::{add, eq},
+        num::church::{add, eq, succ},
     },
     parse,
     term::Notation::Classic,
     IntoChurchNum,
-    Term::{self, Abs},
+    Term::{self},
 };
 use plotters::prelude::*;
 use rand::random;
@@ -28,7 +28,7 @@ use crate::{
 pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
-        discard_copy_actions: false,
+        discard_copy_actions: true,
         discard_identity: false,
         discard_free_variable_expressions: true,
         maintain_constant_population_size: true,
@@ -78,6 +78,23 @@ pub fn test_succ(a: usize) -> Term {
     test
 }
 
+pub fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
+    let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
+    for u in nums {
+        let gut = parse(
+            r"\and. \test. \testscc. \f. and (test f) (testscc f)",
+            Classic,
+        )
+        .unwrap();
+        test = app!(gut, and(), test, test_succ(u));
+    }
+    test.reduce(lambda_calculus::NOR, 0);
+    let mut comp = app!(test.clone(), succ());
+    comp.reduce(lambda_calculus::NOR, 0);
+    assert!(comp.is_isomorphic_to(&boolean::tru()));
+    test
+}
+
 pub fn test_sub(a: usize, b: usize) -> Term {
     let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
     test = app!(
@@ -107,22 +124,37 @@ pub fn test_add_reduction() -> Term {
     comp
 }
 
-
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
-    let run_length = 1000000;
+    let run_length = 100000;
     let polling_interval = 1000;
     let sample = read_inputs().collect::<Vec<Term>>();
-    for i in 0..100 {
+//  let mut sample = vec![];
+//  for size in 5..25 {
+//      let mut gen = BTreeGen::from_config(&config::BTreeGen {
+//          size,
+//          freevar_generation_probability: 0.1,
+//          standardization: crate::generators::Standardization::Prefix,
+//          n_max_free_vars: 6,
+//          seed: config::ConfigSeed::new([0; 32]),
+//      });
+//      sample.append(&mut gen.generate_n(100))
+//  }
+
+    for expr in &sample {
+        println!("{expr}");
+    }
+
+    for i in 0..10 {
         let distribution = sample.clone().into_iter().cycle().take(4000);
-        let tests = (0..1000).map(|_| {
-            let test = test_add_seq((0..5).map(|_| {
-                let u = random::<usize>() % 20;
-                let v = random::<usize>() % 20;
-                (u, v)
-            }));
-            test
-        });
+        let tests = (0..500)
+            .map(|_| {
+                let adds =
+                    test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter());
+                let sccs = test_succ_seq([random::<usize>() % 20; 5].into_iter());
+                [adds, sccs]
+            })
+            .flatten();
         futures.push(spawn(add_magic_tests(
             distribution,
             tests,
@@ -150,28 +182,29 @@ async fn add_magic_tests(
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize)>) {
-    let mut soup = experiment_soup(ConfigSeed::new([1; 32]));
+    let mut soup = experiment_soup(ConfigSeed::new([2; 32]));
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
     let mut populations = Vec::new();
-    for _ in 0..100 {
-        let pops = soup.simulate_and_poll(run_length, polling_interval / 100, false, |s| {
+    for i in 0..10 {
+        let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
-                s.population_of(&add()),
+                s.population_of(&succ()),
             )
         });
         populations.extend(pops);
-        let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
-        let tests = (0..n_remaining).map(|_| {
-            let test = test_add_seq((0..5).map(|_| {
-                let u = random::<usize>() % 20;
-                let v = random::<usize>() % 20;
-                (u, v)
-            }));
-            test
-        });
+        let n_remaining = 2000 - soup.expressions().filter(|e| e.is_recursive()).count();
+        let tests = (0..n_remaining)
+            .map(|_| {
+                let adds =
+                    test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter());
+                let sccs = test_succ_seq([random::<usize>() % 20; 5].into_iter());
+                [adds, sccs]
+            })
+            .flatten();
         soup.add_test_expressions(tests);
+        println!("Soup {id} {}0% done", i + 1);
     }
     (id, populations)
 }

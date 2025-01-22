@@ -118,6 +118,8 @@ impl AlchemyCollider {
         let n = reduce_with_limit(&mut expr, 32000, 16000)?;
 
         if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
+            println!("Found {rt}");
+            println!("Test: {lt}");
             Ok(LambdaCollisionOk {
                 results: vec![right.clone(); 100],
                 reductions: vec![n],
