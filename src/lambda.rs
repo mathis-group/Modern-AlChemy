@@ -54,6 +54,7 @@ pub enum LambdaCollisionError {
     HasFreeVariables,
     ExceedsDepthLimit,
     RecursiveArgument,
+    IsTruthy,
 }
 
 impl LambdaParticle {
@@ -63,6 +64,20 @@ impl LambdaParticle {
 
     pub fn is_recursive(&self) -> bool {
         self.recursive
+    }
+
+    // Check if expr has the form \x1. ... \xn. var for n >= 2
+    pub fn is_truthy(&self) -> bool {
+        let mut expr = self.expr.clone();
+        while let Term::Abs(ref body) = expr {
+            if let Term::Abs(ref var) = **body {
+                if let Term::Var(_) = **var {
+                    return true;
+                }
+            }
+            expr = expr.unabs().unwrap();
+        }
+        false
     }
 }
 
@@ -111,6 +126,9 @@ impl AlchemyCollider {
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
         assert!(left.recursive);
+        if right.is_truthy() {
+            return Err(LambdaCollisionError::IsTruthy);
+        }
         let lt = left.expr.clone();
         let rt = right.expr.clone();
 
@@ -259,6 +277,7 @@ impl fmt::Display for LambdaCollisionError {
                 Display::fmt("expression exceeds depth limit during reduction", f)
             }
             LambdaCollisionError::RecursiveArgument => Display::fmt("argument is recursive", f),
+            LambdaCollisionError::IsTruthy => Display::fmt("argument is truth-like", f),
         }
     }
 }
