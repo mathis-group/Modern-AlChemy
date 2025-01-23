@@ -71,10 +71,10 @@ where
 
         // Remove two distinct expressions randomly from the soup
         let i = self.rng.gen_range(0..n_expr);
-        let left = &self.expressions.swap_remove(i);
+        let left = self.expressions.swap_remove(i);
 
         let j = self.rng.gen_range(0..n_expr - 1);
-        let right = &self.expressions.swap_remove(j);
+        let right = self.expressions.swap_remove(j);
 
         // Add collision results to soup
         let result = self.collider.collide(left.clone(), right.clone());
@@ -93,8 +93,8 @@ where
 
         // Add removed parents back into the soup, if necessary
         if !self.discard_parents {
-            self.expressions.push(left.clone());
-            self.expressions.push(right.clone());
+            self.expressions.push(left);
+            self.expressions.push(right);
         }
 
         result.clone()

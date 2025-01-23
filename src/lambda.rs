@@ -158,9 +158,11 @@ impl AlchemyCollider {
             return Err(LambdaCollisionError::BadArgument);
         }
         let lt = left.expr.clone();
+        let left_size = lt.size();
         let rt = right.expr.clone();
+        let right_size = rt.size();
 
-        let mut expr = app!(lt.clone(), rt.clone());
+        let mut expr = app!(lt, rt.clone());
         let n = reduce_with_limit(&mut expr, 32000, 16000)?;
 
         if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
@@ -169,16 +171,16 @@ impl AlchemyCollider {
                 results: vec![right.clone(); 100],
                 reductions: vec![n],
                 sizes: vec![expr.size()],
-                left_size: lt.size(),
-                right_size: rt.size(),
+                left_size,
+                right_size,
             })
         } else {
             Ok(LambdaCollisionOk {
                 results: vec![left],
                 reductions: vec![n],
                 sizes: vec![expr.size()],
-                left_size: lt.size(),
-                right_size: rt.size(),
+                left_size,
+                right_size,
             })
         }
     }

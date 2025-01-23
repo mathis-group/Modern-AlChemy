@@ -224,7 +224,7 @@ impl Config {
 /// Represents a seed for serde RNGs in the configuration file. Mostly here because we want
 /// to ser/de to/from a hex string.
 #[warn(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ConfigSeed(Option<[u8; 32]>);
 
 impl ConfigSeed {
