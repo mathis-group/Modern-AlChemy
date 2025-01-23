@@ -188,7 +188,7 @@ async fn add_magic_tests(
     id: usize,
     run_length: usize,
     polling_interval: usize,
-) -> (usize, Vec<(usize, usize)>) {
+) -> (usize, Vec<(usize, usize, usize)>) {
     let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
@@ -198,6 +198,7 @@ async fn add_magic_tests(
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
                 s.population_of(&succ()),
+                s.population_of(&add()),
             )
         });
         populations.extend(pops);
