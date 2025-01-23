@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs;
 
 use async_std::task::spawn;
 use clap::error::Result;
@@ -124,31 +125,35 @@ pub fn test_add_reduction() -> Term {
     comp
 }
 
-pub async fn add_search_with_test() {
-    let mut futures = FuturesUnordered::new();
-    let run_length = 100000;
-    let polling_interval = 1000;
-    //    let sample = read_inputs().collect::<Vec<Term>>();
-    let mut sample = vec![succ()];
+pub fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
+    let mut sample = vec![];
     for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
             freevar_generation_probability: 0.1,
             standardization: crate::generators::Standardization::Prefix,
             n_max_free_vars: 6,
-            seed: config::ConfigSeed::new([0; 32]),
+            seed,
         });
         sample.append(&mut gen.generate_n(10 * (20 - size as usize)))
     }
+    sample
+}
 
-    for expr in &sample {
-        if expr.is_isomorphic_to(&succ()) {
-            println!("successor: {expr}");
-        }
-        println!("{expr}, {:?}, {}", expr, uses_both_arguments(expr));
-    }
-
+pub async fn add_search_with_test() {
+    let mut futures = FuturesUnordered::new();
+    let run_length = 100000;
+    let polling_interval = 1000;
+    //    let sample = read_inputs().collect::<Vec<Term>>();
     for i in 0..50 {
+        let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
+        for expr in &sample {
+            if expr.is_isomorphic_to(&succ()) {
+                println!("successor: {expr}");
+            }
+            println!("{expr}, {:?}, {}", expr, uses_both_arguments(expr));
+        }
+
         let distribution = sample.clone().into_iter().cycle().take(4000);
         let tests = (0..500)
             .map(|_| {
@@ -167,14 +172,13 @@ pub async fn add_search_with_test() {
         )));
     }
 
-    print!("Soup, ");
-    println!();
+    let fname = "out.txt";
     while let Some((id, series)) = futures.next().await {
-        print!("{}, ", id);
+        fs::write(fname, format!("{id}, ")).expect("Cannot write to file!");
         for i in series {
-            print!("{:?}, ", i)
+            fs::write(fname, format!("{:?}, ", i)).expect("Cannot write to file!");
         }
-        println!();
+        fs::write(fname, "\n").expect("Cannot write to file!");
     }
 }
 
@@ -185,7 +189,7 @@ async fn add_magic_tests(
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize)>) {
-    let mut soup = experiment_soup(ConfigSeed::new([2; 32]));
+    let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
     let mut populations = Vec::new();
