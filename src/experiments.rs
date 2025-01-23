@@ -21,15 +21,15 @@ use rand::random;
 use crate::{
     config::{self, ConfigSeed},
     generators::BTreeGen,
-    lambda::{reduce_with_limit, LambdaSoup},
+    lambda::{reduce_with_limit, uses_both_arguments, LambdaSoup},
     read_inputs,
 };
 
 pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
-        discard_copy_actions: true,
-        discard_identity: false,
+        discard_copy_actions: false,
+        discard_identity: true,
         discard_free_variable_expressions: true,
         maintain_constant_population_size: true,
         discard_parents: false,
@@ -129,7 +129,7 @@ pub async fn add_search_with_test() {
     let run_length = 100000;
     let polling_interval = 1000;
     //    let sample = read_inputs().collect::<Vec<Term>>();
-    let mut sample = vec![];
+    let mut sample = vec![succ()];
     for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
@@ -145,10 +145,10 @@ pub async fn add_search_with_test() {
         if expr.is_isomorphic_to(&succ()) {
             println!("successor: {expr}");
         }
-        println!("{expr}");
+        println!("{expr}, {:?}, {}", expr, uses_both_arguments(expr));
     }
 
-    for i in 0..10 {
+    for i in 0..50 {
         let distribution = sample.clone().into_iter().cycle().take(4000);
         let tests = (0..500)
             .map(|_| {
@@ -197,7 +197,7 @@ async fn add_magic_tests(
             )
         });
         populations.extend(pops);
-        let n_remaining = 2000 - soup.expressions().filter(|e| e.is_recursive()).count();
+        let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
         let tests = (0..n_remaining)
             .map(|_| {
                 let adds =
