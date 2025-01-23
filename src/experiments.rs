@@ -134,12 +134,17 @@ pub fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
     for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
-            freevar_generation_probability: 0.1,
+            freevar_generation_probability: 0.2,
             standardization: crate::generators::Standardization::Prefix,
             n_max_free_vars: 6,
             seed,
         });
-        sample.append(&mut gen.generate_n(10 * (20 - size as usize)))
+        let n_samples = match size {
+            5..=7 => 800,
+            8..=10 => 400,
+            _ => 200,
+        };
+        sample.append(&mut gen.generate_n(n_samples))
     }
     sample
 }
@@ -158,8 +163,8 @@ pub async fn add_search_with_test() {
             println!(
                 "{expr}, {:?}, {} {} {}",
                 expr,
+                !is_truthy(expr),
                 uses_both_arguments(expr),
-                is_truthy(expr),
                 has_two_args(expr)
             );
         }
