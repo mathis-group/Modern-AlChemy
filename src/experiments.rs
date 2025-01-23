@@ -6,15 +6,10 @@ use async_std::task::spawn;
 use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
-    app,
-    data::{
+    abs, app, data::{
         boolean::{self, and},
         num::church::{add, eq, succ},
-    },
-    parse,
-    term::Notation::Classic,
-    IntoChurchNum,
-    Term::{self},
+    }, parse, term::Notation::Classic, IntoChurchNum, Term::{self, Var}
 };
 use plotters::prelude::*;
 use rand::random;
@@ -25,6 +20,10 @@ use crate::{
     lambda::{reduce_with_limit, uses_both_arguments, LambdaSoup},
     read_inputs,
 };
+
+pub fn coadd() -> Term {
+    abs!(2, app!(Var(2), succ(), Var(1)))
+}
 
 pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
@@ -198,7 +197,7 @@ async fn add_magic_tests(
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
                 s.population_of(&succ()),
-                s.population_of(&add()),
+                s.population_of(&add()) + s.population_of(&coadd()),
             )
         });
         populations.extend(pops);
