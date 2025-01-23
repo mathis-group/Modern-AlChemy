@@ -65,21 +65,29 @@ impl LambdaParticle {
     pub fn is_recursive(&self) -> bool {
         self.recursive
     }
+}
 
-    // Check if expr has the form \x1. ... \xn. var for n >= 2
-    pub fn is_truthy(&self) -> bool {
-        let mut expr = self.expr.clone();
-        while let Term::Abs(ref body) = expr {
-            // Hopefully if let chaining becomes stable someday
-            if let Term::Abs(ref var) = **body {
-                if let Term::Var(_) = **var {
-                    return true;
-                }
-            }
-            expr = expr.unabs().unwrap();
+pub fn has_two_args(expr: &Term) -> bool {
+    if let Term::Abs(ref body) = expr {
+        if let Term::Abs(_) = **body {
+            return true;
         }
-        false
     }
+    false
+}
+
+// Check if expr has the form \x1. ... \xn. var for n >= 2
+pub fn is_truthy(expr: &Term) -> bool {
+    if let Term::Abs(ref body) = expr {
+        // Hopefully if let chaining becomes stable someday
+        if let Term::Abs(ref var) = **body {
+            if let Term::Var(_) = **var {
+                return true;
+            }
+        }
+        return is_truthy(body);
+    }
+    false
 }
 
 fn uses_both_arguments_helper(expr: &Term, depth: usize) -> (bool, bool) {
@@ -145,7 +153,8 @@ impl AlchemyCollider {
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
         assert!(left.recursive);
-        if right.is_truthy() || !uses_both_arguments(&right.expr) {
+        let has_good_signature = uses_both_arguments(&right.expr) && has_two_args(&right.expr);
+        if is_truthy(&right.expr) || !has_good_signature {
             return Err(LambdaCollisionError::BadArgument);
         }
         let lt = left.expr.clone();
