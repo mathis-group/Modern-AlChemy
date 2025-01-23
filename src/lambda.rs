@@ -15,7 +15,7 @@ pub type LambdaSoup =
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaParticle {
-    expr: Term,
+    pub expr: Term,
     recursive: bool,
 }
 
@@ -70,6 +70,7 @@ impl LambdaParticle {
     pub fn is_truthy(&self) -> bool {
         let mut expr = self.expr.clone();
         while let Term::Abs(ref body) = expr {
+            // Hopefully if let chaining becomes stable someday
             if let Term::Abs(ref var) = **body {
                 if let Term::Var(_) = **var {
                     return true;
@@ -81,21 +82,21 @@ impl LambdaParticle {
     }
 }
 
-fn uses_both_arguments_helper(expr: &Term) -> (bool, bool) {
+fn uses_both_arguments_helper(expr: &Term, depth: usize) -> (bool, bool) {
     match expr {
-        Term::Abs(ref boxed) => uses_both_arguments_helper(boxed),
+        Term::Abs(ref boxed) => uses_both_arguments_helper(boxed, depth + 1),
         Term::App(ref boxed) => {
             let (ref left, ref right) = **boxed;
-            let (l0, l1) = uses_both_arguments_helper(&left);
-            let (r0, r1) = uses_both_arguments_helper(&right);
+            let (l0, l1) = uses_both_arguments_helper(&left, depth);
+            let (r0, r1) = uses_both_arguments_helper(&right, depth);
             (l0 || r0, l1 || r1)
         }
-        Term::Var(n) => (*n == 0, *n == 1),
+        Term::Var(n) => (*n == depth, *n == depth - 1),
     }
 }
 
 pub fn uses_both_arguments(expr: &Term) -> bool {
-    let (left, right) = uses_both_arguments_helper(expr);
+    let (left, right) = uses_both_arguments_helper(expr, 0);
     left && right
 }
 
@@ -144,7 +145,7 @@ impl AlchemyCollider {
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
         assert!(left.recursive);
-        if right.is_truthy() || uses_both_arguments(&right.expr) {
+        if right.is_truthy() || !uses_both_arguments(&right.expr) {
             return Err(LambdaCollisionError::BadArgument);
         }
         let lt = left.expr.clone();
