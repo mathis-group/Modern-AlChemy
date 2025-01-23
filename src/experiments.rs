@@ -49,7 +49,7 @@ pub fn test_add(a: usize, b: usize) -> Term {
         (a + b).into_church()
     );
     // `test` has type (church -> church -> church) -> bool
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     test
 }
 
@@ -63,9 +63,9 @@ pub fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
         .unwrap();
         test = app!(gut, and(), test, test_add(u, v));
     }
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     let mut comp = app!(test.clone(), add());
-    comp.reduce(lambda_calculus::NOR, 0);
+    comp.reduce(lambda_calculus::HAP, 0);
     assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
 }
@@ -74,7 +74,7 @@ pub fn test_succ(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a + 1).into_church());
     // `test` has type (church -> church) -> bool
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     test
 }
 
@@ -88,9 +88,9 @@ pub fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
         .unwrap();
         test = app!(gut, and(), test, test_succ(u));
     }
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     let mut comp = app!(test.clone(), succ());
-    comp.reduce(lambda_calculus::NOR, 0);
+    comp.reduce(lambda_calculus::HAP, 0);
     assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
 }
@@ -105,7 +105,7 @@ pub fn test_sub(a: usize, b: usize) -> Term {
         (a - b).into_church()
     );
     // `test` has type (church -> church -> church) -> bool
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     test
 }
 
@@ -113,13 +113,13 @@ pub fn test_pred(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \apred. \f. (eq (f a) apred)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a - 1).into_church());
     // `test` has type (church -> church) -> bool
-    test.reduce(lambda_calculus::NOR, 0);
+    test.reduce(lambda_calculus::HAP, 0);
     test
 }
 
 pub fn test_add_reduction() -> Term {
     let mut comp = app!(test_add(20, 20), add());
-    let n = comp.reduce(lambda_calculus::NOR, 0);
+    let n = comp.reduce(lambda_calculus::HAP, 0);
     println!("add reduction in {n} steps: {comp}");
     comp
 }
@@ -128,9 +128,9 @@ pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 100000;
     let polling_interval = 1000;
-//    let sample = read_inputs().collect::<Vec<Term>>();
+    //    let sample = read_inputs().collect::<Vec<Term>>();
     let mut sample = vec![];
-    for size in 5..25 {
+    for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
             freevar_generation_probability: 0.1,
@@ -138,10 +138,13 @@ pub async fn add_search_with_test() {
             n_max_free_vars: 6,
             seed: config::ConfigSeed::new([0; 32]),
         });
-        sample.append(&mut gen.generate_n(100))
+        sample.append(&mut gen.generate_n(10 * (20 - size as usize)))
     }
 
     for expr in &sample {
+        if expr.is_isomorphic_to(&succ()) {
+            println!("successor: {expr}");
+        }
         println!("{expr}");
     }
 
