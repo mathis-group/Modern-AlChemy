@@ -6,10 +6,15 @@ use async_std::task::spawn;
 use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
-    abs, app, data::{
+    abs, app,
+    data::{
         boolean::{self, and},
         num::church::{add, eq, succ},
-    }, parse, term::Notation::Classic, IntoChurchNum, Term::{self, Var}
+    },
+    parse,
+    term::Notation::Classic,
+    IntoChurchNum,
+    Term::{self, Var},
 };
 use plotters::prelude::*;
 use rand::random;
@@ -17,7 +22,7 @@ use rand::random;
 use crate::{
     config::{self, ConfigSeed},
     generators::BTreeGen,
-    lambda::{reduce_with_limit, uses_both_arguments, LambdaSoup},
+    lambda::{has_two_args, is_truthy, reduce_with_limit, uses_both_arguments, LambdaSoup},
     read_inputs,
 };
 
@@ -150,7 +155,13 @@ pub async fn add_search_with_test() {
             if expr.is_isomorphic_to(&succ()) {
                 println!("successor: {expr}");
             }
-            println!("{expr}, {:?}, {}", expr, uses_both_arguments(expr));
+            println!(
+                "{expr}, {:?}, {} {} {}",
+                expr,
+                uses_both_arguments(expr),
+                is_truthy(expr),
+                has_two_args(expr)
+            );
         }
 
         let distribution = sample.clone().into_iter().cycle().take(4000);
