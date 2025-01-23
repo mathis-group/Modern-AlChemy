@@ -54,7 +54,7 @@ pub enum LambdaCollisionError {
     HasFreeVariables,
     ExceedsDepthLimit,
     RecursiveArgument,
-    IsTruthy,
+    BadArgument,
 }
 
 impl LambdaParticle {
@@ -79,6 +79,24 @@ impl LambdaParticle {
         }
         false
     }
+}
+
+fn uses_both_arguments_helper(expr: &Term) -> (bool, bool) {
+    match expr {
+        Term::Abs(ref boxed) => uses_both_arguments_helper(boxed),
+        Term::App(ref boxed) => {
+            let (ref left, ref right) = **boxed;
+            let (l0, l1) = uses_both_arguments_helper(&left);
+            let (r0, r1) = uses_both_arguments_helper(&right);
+            (l0 || r0, l1 || r1)
+        }
+        Term::Var(n) => (*n == 0, *n == 1),
+    }
+}
+
+pub fn uses_both_arguments(expr: &Term) -> bool {
+    let (left, right) = uses_both_arguments_helper(expr);
+    left && right
 }
 
 pub fn reduce_with_limit(
@@ -126,8 +144,8 @@ impl AlchemyCollider {
         right: LambdaParticle,
     ) -> Result<LambdaCollisionOk, LambdaCollisionError> {
         assert!(left.recursive);
-        if right.is_truthy() {
-            return Err(LambdaCollisionError::IsTruthy);
+        if right.is_truthy() || uses_both_arguments(&right.expr) {
+            return Err(LambdaCollisionError::BadArgument);
         }
         let lt = left.expr.clone();
         let rt = right.expr.clone();
@@ -137,7 +155,6 @@ impl AlchemyCollider {
 
         if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
             println!("Found {rt}");
-            println!("Test: {lt}");
             Ok(LambdaCollisionOk {
                 results: vec![right.clone(); 100],
                 reductions: vec![n],
@@ -277,7 +294,10 @@ impl fmt::Display for LambdaCollisionError {
                 Display::fmt("expression exceeds depth limit during reduction", f)
             }
             LambdaCollisionError::RecursiveArgument => Display::fmt("argument is recursive", f),
-            LambdaCollisionError::IsTruthy => Display::fmt("argument is truth-like", f),
+            LambdaCollisionError::BadArgument => Display::fmt(
+                "argument is truth-like or doesn't use all of own arguments",
+                f,
+            ),
         }
     }
 }
