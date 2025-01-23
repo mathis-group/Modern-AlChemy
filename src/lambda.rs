@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use crate::config;
 use crate::supercollider::{Collider, Particle, Residue, Soup};
+use lambda_calculus::data::num::church::eq;
 use lambda_calculus::{abs, app, IntoChurchNum, Term, Var};
 
 use rand::SeedableRng;
@@ -165,10 +166,13 @@ impl AlchemyCollider {
         let n = reduce_with_limit(&mut expr, 32000, 16000)?;
 
         if expr.is_isomorphic_to(&lambda_calculus::data::boolean::tru()) {
-            println!("Found {rt}");
+            println!("Found {expr} <- {rt}");
             let mut expr = app!(rt.clone(), 2.into_church(), 3.into_church());
-            let n = reduce_with_limit(&mut expr, 32000, 16000)?;
+            reduce_with_limit(&mut expr, 32000, 16000)?;
             println!("Reduces f 2 3 to: {expr}");
+            expr = app!(eq(), expr, 5.into_church());
+            reduce_with_limit(&mut expr, 32000, 16000)?;
+            println!("Reduces (= (f 2 3) 5) to: {expr}");
             Ok(LambdaCollisionOk {
                 results: vec![right.clone(); 100],
                 reductions: vec![n],

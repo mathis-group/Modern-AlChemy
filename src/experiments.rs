@@ -44,7 +44,7 @@ pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     })
 }
 
-pub fn test_add(a: usize, b: usize) -> Term {
+fn test_add(a: usize, b: usize) -> Term {
     let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
     test = app!(
         test,
@@ -58,7 +58,7 @@ pub fn test_add(a: usize, b: usize) -> Term {
     test
 }
 
-pub fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
+fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
     let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
     for (u, v) in pairs {
         let gut = parse(
@@ -75,7 +75,7 @@ pub fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
     test
 }
 
-pub fn test_succ(a: usize) -> Term {
+fn test_succ(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a + 1).into_church());
     // `test` has type (church -> church) -> bool
@@ -83,7 +83,7 @@ pub fn test_succ(a: usize) -> Term {
     test
 }
 
-pub fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
+fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
     let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
     for u in nums {
         let gut = parse(
@@ -100,7 +100,7 @@ pub fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
     test
 }
 
-pub fn test_sub(a: usize, b: usize) -> Term {
+fn test_sub(a: usize, b: usize) -> Term {
     let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
     test = app!(
         test,
@@ -114,7 +114,7 @@ pub fn test_sub(a: usize, b: usize) -> Term {
     test
 }
 
-pub fn test_pred(a: usize) -> Term {
+fn test_pred(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \apred. \f. (eq (f a) apred)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a - 1).into_church());
     // `test` has type (church -> church) -> bool
@@ -129,7 +129,7 @@ pub fn test_add_reduction() -> Term {
     comp
 }
 
-pub fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
+fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
     let mut sample = vec![];
     for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
@@ -169,12 +169,12 @@ pub async fn add_search_with_test() {
             );
         }
 
-        let distribution = sample.clone().into_iter().cycle().take(4000);
+        let distribution = sample.clone().into_iter().cycle().take(5000);
         let tests = (0..500)
             .map(|_| {
                 let adds =
-                    test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter());
-                let sccs = test_succ_seq([random::<usize>() % 20; 5].into_iter());
+                    test_add_seq((0..5).map(|_| (random::<usize>() % 20, random::<usize>() % 20)));
+                let sccs = test_succ_seq((0..5).map(|_| random::<usize>() % 20));
                 [adds, sccs]
             })
             .flatten();
@@ -280,6 +280,10 @@ pub async fn look_for_add() {
         println!();
     }
 }
+
+async fn and_magic_tests() {}
+
+async fn xor_magic_tests() {}
 
 pub fn one_sample_with_dist() {
     let run_length = 1000000;
