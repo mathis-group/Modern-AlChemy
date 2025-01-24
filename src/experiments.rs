@@ -16,7 +16,6 @@ use lambda_calculus::{
     IntoChurchNum,
     Term::{self, Var},
 };
-use plotters::prelude::*;
 use rand::random;
 
 use crate::{
@@ -564,8 +563,6 @@ pub async fn entropy_test() {
         println!("{}, {}, {}", id, entropy, failure_rate);
         data.push(entropy);
     }
-
-    plot_histogram(&data).unwrap();
 }
 
 pub fn sync_entropy_test() {
@@ -585,34 +582,4 @@ pub fn sync_entropy_test() {
         let entropy = soup.population_entropy();
         println!("{}: {}", i, entropy);
     }
-}
-
-fn plot_histogram(data: &[f32]) -> Result<(), Box<dyn Error>> {
-    let root = BitMapBackend::new("test.png", (1000, 1000)).into_drawing_area();
-    root.fill(&BLACK)?;
-
-    let mut chart = ChartBuilder::on(&root)
-        .x_label_area_size(35)
-        .y_label_area_size(40)
-        .margin(5)
-        .caption("Population Entropy", ("sans-serif", 50.0))
-        .build_cartesian_2d((0u32..10u32).into_segmented(), 0f32..3f32)?;
-
-    chart
-        .configure_mesh()
-        .disable_x_mesh()
-        .bold_line_style(WHITE.mix(0.3))
-        .y_desc("Count")
-        .x_desc("Bucket")
-        .axis_desc_style(("sans-serif", 15))
-        .draw()?;
-
-    chart.draw_series(
-        Histogram::vertical(&chart)
-            .style(RED.mix(0.5).filled())
-            .data(data.iter().map(|x: &f32| (1, *x))),
-    )?;
-
-    root.present().expect("Unable to write result to file");
-    Ok(())
 }
