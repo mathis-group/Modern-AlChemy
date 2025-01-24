@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::error::Error;
-use std::fs;
+use std::fmt::Debug;
+use std::fs::File;
+use std::{collections::HashMap, io::Result, io::Write};
 
 use async_std::task::spawn;
-use clap::error::Result;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
     abs, app,
+    combinators::S,
     data::{
         boolean::{self, and},
         num::church::{add, eq, succ},
@@ -130,7 +130,7 @@ pub fn test_add_reduction() -> Term {
 }
 
 fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
-    let mut sample = vec![];
+    let mut sample = vec![S(); 100];
     for size in 5..15 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
@@ -153,21 +153,10 @@ pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 100000;
     let polling_interval = 1000;
-    //    let sample = read_inputs().collect::<Vec<Term>>();
     for i in 0..50 {
+        // let sample = read_inputs().collect::<Vec<Term>>();
         let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
-        for expr in &sample {
-            if expr.is_isomorphic_to(&succ()) {
-                println!("successor: {expr}");
-            }
-            println!(
-                "{expr}, {:?}, {} {} {}",
-                expr,
-                !is_truthy(expr),
-                uses_both_arguments(expr),
-                has_two_args(expr)
-            );
-        }
+        dump_sample(&sample);
 
         let distribution = sample.clone().into_iter().cycle().take(5000);
         let tests = (0..500)
@@ -187,14 +176,39 @@ pub async fn add_search_with_test() {
         )));
     }
 
-    let fname = "out.txt";
+    let fname = "outputs/out.txt";
     while let Some((id, series)) = futures.next().await {
-        fs::write(fname, format!("{id}, ")).expect("Cannot write to file!");
-        for i in series {
-            fs::write(fname, format!("{:?}, ", i)).expect("Cannot write to file!");
-        }
-        fs::write(fname, "\n").expect("Cannot write to file!");
+        dump_series_to_file(fname, series, id).expect("Cannot write to file");
     }
+}
+
+fn dump_sample(sample: &Vec<Term>) {
+    for expr in sample {
+        if expr.is_isomorphic_to(&succ()) {
+            println!("successor: {expr}");
+        }
+        println!(
+            "{expr}, {:?}, {} {} {}",
+            expr,
+            !is_truthy(expr),
+            uses_both_arguments(expr),
+            has_two_args(expr)
+        );
+    }
+}
+
+fn dump_series_to_file<T>(fname: &str, series: T, id: usize) -> Result<()>
+where
+    T: IntoIterator,
+    <T as IntoIterator>::Item: Debug,
+{
+    let mut file = File::create(fname)?;
+    write!(file, "{id}, ")?;
+    for i in series {
+        write!(file, "{:?}, ", i)?;
+    }
+    write!(file, "\n")?;
+    Ok(())
 }
 
 async fn add_magic_tests(
