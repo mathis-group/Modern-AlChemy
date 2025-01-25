@@ -6,7 +6,7 @@ use async_std::task::spawn;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
     abs, app,
-    combinators::S,
+    combinators::{S, K, I},
     data::{
         boolean::{self, and},
         num::church::{add, eq, succ},
@@ -148,13 +148,18 @@ fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
     sample
 }
 
+fn generate_ski_sample(_: ConfigSeed) -> Vec<Term> {
+    [S(), K(), I()].to_vec()
+}
+
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 100000;
     let polling_interval = 1000;
     for i in 0..50 {
         // let sample = read_inputs().collect::<Vec<Term>>();
-        let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
+        // let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
+        let sample = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
         dump_sample(&sample);
 
         let distribution = sample.clone().into_iter().cycle().take(5000);
@@ -231,14 +236,9 @@ async fn add_magic_tests(
         });
         populations.extend(pops);
         let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
-        let tests = (0..n_remaining)
-            .map(|_| {
-                let adds =
-                    test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter());
-                let sccs = test_succ_seq([random::<usize>() % 20; 5].into_iter());
-                [adds, sccs]
-            })
-            .flatten();
+        let tests = (0..n_remaining).map(|_| {
+            test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter())
+        });
         soup.add_test_expressions(tests);
         println!("Soup {id} {}0% done", i + 1);
     }

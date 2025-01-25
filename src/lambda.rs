@@ -174,7 +174,7 @@ impl AlchemyCollider {
             reduce_with_limit(&mut expr, 32000, 16000)?;
             println!("Reduces (= (f 2 3) 5) to: {expr}");
             Ok(LambdaCollisionOk {
-                results: vec![right.clone(); 100],
+                results: vec![right.clone(); 20],
                 reductions: vec![n],
                 sizes: vec![expr.size()],
                 left_size,
