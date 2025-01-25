@@ -6,7 +6,7 @@ use async_std::task::spawn;
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{
     abs, app,
-    combinators::{S, K, I},
+    combinators::{I, K, S},
     data::{
         boolean::{self, and},
         num::church::{add, eq, succ},
@@ -129,8 +129,10 @@ pub fn test_add_reduction() -> Term {
 }
 
 fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
-    let mut sample = vec![S(); 100];
-    for size in 5..15 {
+    let mut sample = vec![S(); 200];
+    sample.append(&mut vec![K(); 100]);
+    sample.append(&mut vec![I(); 100]);
+    for size in 5..12 {
         let mut gen = BTreeGen::from_config(&config::BTreeGen {
             size,
             freevar_generation_probability: 0.2,
@@ -156,7 +158,7 @@ pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 100000;
     let polling_interval = 1000;
-    for i in 0..50 {
+    for i in 0..16 {
         // let sample = read_inputs().collect::<Vec<Term>>();
         // let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
         let sample = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
@@ -180,7 +182,7 @@ pub async fn add_search_with_test() {
         )));
     }
 
-    let fname = "outputs/out.txt";
+    let fname = "output";
     while let Some((id, series)) = futures.next().await {
         dump_series_to_file(fname, series, id).expect("Cannot write to file");
     }
@@ -206,7 +208,7 @@ where
     T: IntoIterator,
     <T as IntoIterator>::Item: Debug,
 {
-    let mut file = File::create(fname)?;
+    let mut file = File::create(format!("{id}-{fname}.txt"))?;
     write!(file, "{id}, ")?;
     for i in series {
         write!(file, "{:?}, ", i)?;
@@ -237,7 +239,12 @@ async fn add_magic_tests(
         populations.extend(pops);
         let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
         let tests = (0..n_remaining).map(|_| {
-            test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter())
+            let choice = random::<bool>();
+            if choice {
+                test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter())
+            } else {
+                test_succ_seq([random::<usize>() % 20; 5].into_iter())
+            }
         });
         soup.add_test_expressions(tests);
         println!("Soup {id} {}0% done", i + 1);
