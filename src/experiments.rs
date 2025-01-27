@@ -4,7 +4,6 @@ use std::{collections::HashMap, io::Result, io::Write};
 
 use async_std::task::spawn;
 use futures::{stream::FuturesUnordered, StreamExt};
-use lambda_calculus::combinators::C;
 use lambda_calculus::{
     abs, app,
     combinators::{I, K, S},
@@ -178,18 +177,18 @@ fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
 
 fn generate_ski_sample(_: ConfigSeed) -> Vec<Term> {
     let mut sample = vec![];
-    sample.append(&mut vec![S(); 100]);
-    sample.append(&mut vec![K(); 100]);
-    sample.append(&mut vec![I(); 100]);
-    sample.append(&mut vec![p213(); 10]);
+    sample.append(&mut vec![S(); 10]);
+    sample.append(&mut vec![K(); 10]);
+    sample.append(&mut vec![I(); 10]);
+    sample.append(&mut vec![p213(); 1]);
     sample
 }
 
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
-    let run_length = 100000;
+    let run_length = 200000;
     let polling_interval = 1000;
-    for i in 0..16 {
+    for i in 0..32 {
         // let sample = read_inputs().collect::<Vec<Term>>();
         // let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
         let sample = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
@@ -259,8 +258,8 @@ async fn add_magic_tests(
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
     let mut populations = Vec::new();
-    for i in 0..10 {
-        let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
+    for i in 0..20 {
+        let pops = soup.simulate_and_poll(run_length / 20, polling_interval, false, |s| {
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
                 s.population_of(&succ()),
@@ -277,7 +276,10 @@ async fn add_magic_tests(
                 test_succ_seq([random::<usize>() % 20; 5].into_iter())
             }
         });
-        soup.add_test_expressions(tests);
+        soup.perturb_test_expressions(n_remaining, tests);
+        let skis = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
+        soup.perturb_lambda_expressions(200, skis);
+
         println!("Soup {id} {}0% done", i + 1);
     }
     (id, populations)
