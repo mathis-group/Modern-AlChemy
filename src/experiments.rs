@@ -4,6 +4,7 @@ use std::{collections::HashMap, io::Result, io::Write};
 
 use async_std::task::spawn;
 use futures::{stream::FuturesUnordered, StreamExt};
+use lambda_calculus::combinators::C;
 use lambda_calculus::{
     abs, app,
     combinators::{I, K, S},
@@ -27,6 +28,31 @@ use crate::{
 
 pub fn coadd() -> Term {
     abs!(2, app!(Var(2), succ(), Var(1)))
+}
+
+// Triplet permutation combinators
+pub fn p123() -> Term {
+    abs!(3, app!(Var(1), Var(2), Var(3)))
+}
+
+pub fn p132() -> Term {
+    abs!(3, app!(Var(1), Var(3), Var(2)))
+}
+
+pub fn p213() -> Term {
+    abs!(3, app!(Var(2), Var(1), Var(3)))
+}
+
+pub fn p231() -> Term {
+    abs!(3, app!(Var(2), Var(3), Var(1)))
+}
+
+pub fn p312() -> Term {
+    abs!(3, app!(Var(3), Var(1), Var(2)))
+}
+
+pub fn p321() -> Term {
+    abs!(3, app!(Var(3), Var(2), Var(1)))
 }
 
 pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
@@ -151,7 +177,12 @@ fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
 }
 
 fn generate_ski_sample(_: ConfigSeed) -> Vec<Term> {
-    [S(), K(), I()].to_vec()
+    let mut sample = vec![];
+    sample.append(&mut vec![S(); 100]);
+    sample.append(&mut vec![K(); 100]);
+    sample.append(&mut vec![I(); 100]);
+    sample.append(&mut vec![p213(); 10]);
+    sample
 }
 
 pub async fn add_search_with_test() {
