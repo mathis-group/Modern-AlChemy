@@ -93,7 +93,7 @@ fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
         test = app!(gut, and(), test, test_add(u, v));
     }
     test.reduce(lambda_calculus::HAP, 0);
-    let mut comp = app!(test.clone(), add());
+    let mut comp = app!(test.clone(), app!(p213(), succ()));
     comp.reduce(lambda_calculus::HAP, 0);
     assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
@@ -181,14 +181,19 @@ fn generate_ski_sample(_: ConfigSeed) -> Vec<Term> {
     sample.append(&mut vec![K(); 10]);
     sample.append(&mut vec![I(); 10]);
     sample.append(&mut vec![p213(); 1]);
+    sample.append(&mut vec![add(); 100]);
     sample
+}
+
+fn generate_skip_sample(_: ConfigSeed) -> Vec<Term> {
+    vec![S(), K(), I(), p213()]
 }
 
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 200000;
     let polling_interval = 1000;
-    for i in 0..32 {
+    for i in 0..16 {
         // let sample = read_inputs().collect::<Vec<Term>>();
         // let sample = generate_sample_for_addsearch(ConfigSeed::new([i as u8; 32]));
         let sample = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
@@ -241,7 +246,7 @@ where
     let mut file = File::create(format!("{id}-{fname}.txt"))?;
     write!(file, "{id}, ")?;
     for i in series {
-        write!(file, "{:?}, ", i)?;
+        write!(file, "{:?}; ", i)?;
     }
     write!(file, "\n")?;
     Ok(())
@@ -277,8 +282,8 @@ async fn add_magic_tests(
             }
         });
         soup.perturb_test_expressions(n_remaining, tests);
-        let skis = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
-        soup.perturb_lambda_expressions(200, skis);
+        let skips = generate_skip_sample(ConfigSeed::new([i as u8; 32]));
+        soup.perturb_lambda_expressions(200, skips);
 
         println!("Soup {id} {}0% done", i + 1);
     }
