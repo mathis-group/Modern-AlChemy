@@ -93,7 +93,7 @@ fn test_add_seq(pairs: impl Iterator<Item = (usize, usize)>) -> Term {
         test = app!(gut, and(), test, test_add(u, v));
     }
     test.reduce(lambda_calculus::HAP, 0);
-    let mut comp = app!(test.clone(), app!(p213(), succ()));
+    let mut comp = app!(test.clone(), add());
     comp.reduce(lambda_calculus::HAP, 0);
     assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
@@ -147,7 +147,14 @@ fn test_pred(a: usize) -> Term {
 }
 
 pub fn test_add_reduction() -> Term {
-    let mut comp = app!(test_add(20, 20), add());
+    let mut comp = app!(p132(), succ());
+
+    println!("comp: {}", comp);
+    println!("scc: {}", succ());
+    comp.reduce(lambda_calculus::NOR, 0);
+    println!("{}", comp.is_isomorphic_to(&add()));
+    println!("comp: {}, add: {}", comp, add());
+    comp = app!(test_add(20, 20), comp);
     let n = comp.reduce(lambda_calculus::HAP, 0);
     println!("add reduction in {n} steps: {comp}");
     comp
@@ -180,18 +187,17 @@ fn generate_ski_sample(_: ConfigSeed) -> Vec<Term> {
     sample.append(&mut vec![S(); 10]);
     sample.append(&mut vec![K(); 10]);
     sample.append(&mut vec![I(); 10]);
-    sample.append(&mut vec![p213(); 1]);
-    sample.append(&mut vec![add(); 100]);
+    sample.append(&mut vec![p132(); 1]);
     sample
 }
 
 fn generate_skip_sample(_: ConfigSeed) -> Vec<Term> {
-    vec![S(), K(), I(), p213()]
+    vec![S(), K(), I(), p132()]
 }
 
 pub async fn add_search_with_test() {
     let mut futures = FuturesUnordered::new();
-    let run_length = 200000;
+    let run_length = 100000;
     let polling_interval = 1000;
     for i in 0..16 {
         // let sample = read_inputs().collect::<Vec<Term>>();
@@ -263,8 +269,8 @@ async fn add_magic_tests(
     soup.add_lambda_expressions(sample);
     soup.add_test_expressions(tests);
     let mut populations = Vec::new();
-    for i in 0..20 {
-        let pops = soup.simulate_and_poll(run_length / 20, polling_interval, false, |s| {
+    for i in 0..10 {
+        let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
                 s.population_of(&succ()),

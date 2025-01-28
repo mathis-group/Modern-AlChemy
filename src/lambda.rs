@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::config;
 use crate::supercollider::{Collider, Particle, Residue, Soup};
-use lambda_calculus::data::num::church::eq;
+use lambda_calculus::data::num::church::{add, eq};
 use lambda_calculus::{abs, app, IntoChurchNum, Term, Var};
 
 use rand::{Rng, SeedableRng};
