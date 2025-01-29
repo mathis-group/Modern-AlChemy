@@ -4,6 +4,7 @@ use std::{collections::HashMap, io::Result, io::Write};
 
 use async_std::task::spawn;
 use futures::{stream::FuturesUnordered, StreamExt};
+use lambda_calculus::reduction::Order::HAP;
 use lambda_calculus::{
     abs, app,
     combinators::{I, K, S},
@@ -27,6 +28,12 @@ use crate::{
 
 pub fn coadd() -> Term {
     abs!(2, app!(Var(2), succ(), Var(1)))
+}
+
+pub fn addtwo() -> Term {
+    let mut comp = app!(succ(), succ());
+    comp.reduce(HAP, 0);
+    comp
 }
 
 // Triplet permutation combinators
@@ -58,7 +65,7 @@ pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
         rules: vec![String::from("\\x.\\y.x y")],
         discard_copy_actions: false,
-        discard_identity: true,
+        discard_identity: false,
         discard_free_variable_expressions: true,
         maintain_constant_population_size: true,
         discard_parents: false,
@@ -119,6 +126,31 @@ fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
     }
     test.reduce(lambda_calculus::HAP, 0);
     let mut comp = app!(test.clone(), succ());
+    comp.reduce(lambda_calculus::HAP, 0);
+    assert!(comp.is_isomorphic_to(&boolean::tru()));
+    test
+}
+
+fn test_addtwo(a: usize) -> Term {
+    let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
+    test = app!(test, eq(), a.into_church(), (a + 2).into_church());
+    // `test` has type (church -> church) -> bool
+    test.reduce(lambda_calculus::HAP, 0);
+    test
+}
+
+fn test_addtwo_seq(nums: impl Iterator<Item = usize>) -> Term {
+    let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
+    for u in nums {
+        let gut = parse(
+            r"\and. \test. \testscc. \f. and (test f) (testscc f)",
+            Classic,
+        )
+        .unwrap();
+        test = app!(gut, and(), test, test_addtwo(u));
+    }
+    test.reduce(lambda_calculus::HAP, 0);
+    let mut comp = app!(test.clone(), addtwo());
     comp.reduce(lambda_calculus::HAP, 0);
     assert!(comp.is_isomorphic_to(&boolean::tru()));
     test
@@ -211,7 +243,10 @@ pub async fn add_search_with_test() {
                 let adds =
                     test_add_seq((0..5).map(|_| (random::<usize>() % 20, random::<usize>() % 20)));
                 let sccs = test_succ_seq((0..5).map(|_| random::<usize>() % 20));
-                [adds, sccs]
+                let adds = test_add(random::<usize>() % 20, random::<usize>() % 20);
+                let sccs = test_succ(random::<usize>() % 20);
+                let addtwos = test_addtwo(random::<usize>() % 20); 
+                [addtwos, sccs]
             })
             .flatten();
         futures.push(spawn(add_magic_tests(
@@ -274,7 +309,8 @@ async fn add_magic_tests(
             (
                 s.expressions().filter(|e| e.is_recursive()).count(),
                 s.population_of(&succ()),
-                s.population_of(&add()) + s.population_of(&coadd()),
+                // s.population_of(&add()) + s.population_of(&coadd()),
+                s.population_of(&addtwo()),
             )
         });
         populations.extend(pops);
@@ -282,9 +318,12 @@ async fn add_magic_tests(
         let tests = (0..n_remaining).map(|_| {
             let choice = random::<bool>();
             if choice {
-                test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter())
+                // test_add_seq([(random::<usize>() % 20, random::<usize>() % 20); 5].into_iter())
+                // test_add(random::<usize>() % 20, random::<usize>() % 20)
+                test_addtwo(random::<usize>() % 20)
             } else {
-                test_succ_seq([random::<usize>() % 20; 5].into_iter())
+                // test_succ_seq([random::<usize>() % 20; 5].into_iter())
+                test_succ(random::<usize>() % 20)
             }
         });
         soup.perturb_test_expressions(n_remaining, tests);
