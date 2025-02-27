@@ -128,7 +128,7 @@ impl BTreeGen {
     }
 
     fn postfix_standardize(t: Term) -> Term {
-        unimplemented!("Postix standiardization is unimplimented!!!!");
+        unimplemented!("Postfix standiardization is unimplimented!!!!");
     }
 
     /// Add abstractions until the expression has no free variables
