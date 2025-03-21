@@ -1,43 +1,27 @@
+use alchemy::{config, experiments, generators, lambda, utils};
 use clap::{Parser, ValueEnum};
-use futures::executor::block_on;
 use generators::BTreeGen;
-use lambda_calculus::*;
+use lambda_calculus::Term;
 use std::fs::{read_to_string, File};
-use std::io::{self, BufRead, BufReader, Write};
-
-/// Simulation analysis
-mod analysis;
-
-/// Global configuration
-mod config;
-
-/// Random expression generators
-mod generators;
-
-/// Main AlChemy simulation module
-mod supercollider;
-
-/// Experimental stuff
-mod experiments;
-
-/// Utilities
-mod utils;
-
-/// Lambda-calculus stuff
-mod lambda;
+use std::io::Write;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Experiment {
-    XorsetStability,
+    // entropy.rs
+    EntropyAndFailures,
+    SyncEntropyAndFailures,
+    EntropyTimeSeries,
+
+    // search_by_behavior.rs
     XorsetSearch,
-    AdditionSearch,
-    SyncEntropyTest,
-    EntropyTest,
-    EntropySeries,
-    SampleSimulate,
-    SampleScan,
-    MagicTestFunction,
-    MagicTestConstruct,
+    NotXorsetSearch,
+
+    // distribution.rs
+    DistributionTimeSeries,
+
+    // magic_test_function.rs
+    AddSearchNoTest,
+    AddSearchWithTest,
 }
 
 #[derive(Parser, Debug)]
@@ -111,26 +95,6 @@ fn get_config(cli: &Cli) -> std::io::Result<config::Config> {
     Ok(config)
 }
 
-/// Read lambda expressions from stdin and return an iterator over them
-pub fn read_inputs() -> impl Iterator<Item = Term> {
-    let mut expression_strings = Vec::<String>::new();
-    let stdin = io::stdin();
-    let reader = BufReader::new(stdin.lock());
-
-    for line in reader.lines() {
-        match line {
-            Ok(line) => expression_strings.push(line),
-            Err(_) => break,
-        }
-    }
-
-    let expressions = expression_strings
-        .iter()
-        .map(|s| lambda_calculus::parse(s, lambda_calculus::Classic).unwrap())
-        .collect::<Vec<Term>>();
-    expressions.into_iter()
-}
-
 pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::LambdaSoup {
     let expressions = match &cfg.generator_config {
         config::Generator::BTree(gen_cfg) => {
@@ -176,37 +140,24 @@ fn main() -> std::io::Result<()> {
 
     if let Some(e) = cli.experiment {
         match e {
-            Experiment::XorsetStability => {}
-            Experiment::AdditionSearch => {
-                block_on(experiments::look_for_add());
-            }
-            Experiment::MagicTestFunction => {
-                block_on(experiments::add_search_with_test());
-            }
-            Experiment::SyncEntropyTest => experiments::sync_entropy_test(),
-            Experiment::SampleScan => experiments::one_sample_with_dist(),
-            Experiment::XorsetSearch => {
-                block_on(experiments::look_for_xorset());
-            }
-            Experiment::EntropyTest => {
-                block_on(experiments::entropy_test());
-            }
-            Experiment::EntropySeries => {
-                block_on(experiments::entropy_series());
-            }
-            Experiment::SampleSimulate => {
-                block_on(experiments::simulate_sample());
-            }
-            Experiment::MagicTestConstruct => {
-                experiments::test_add_reduction();
-            }
+            Experiment::EntropyAndFailures => experiments::entropy::entropy_and_failures(),
+            Experiment::SyncEntropyAndFailures => experiments::entropy::sync_entropy_and_failures(),
+            Experiment::EntropyTimeSeries => experiments::entropy::entropy_time_series(),
+
+            Experiment::XorsetSearch => experiments::search_by_behavior::look_for_xorset(),
+            Experiment::NotXorsetSearch => experiments::search_by_behavior::look_for_not_xorset(),
+
+            Experiment::DistributionTimeSeries => experiments::distribution::one_sample_with_dist(),
+
+            Experiment::AddSearchWithTest => experiments::magic_test_function::add_search_with_test(),
+            Experiment::AddSearchNoTest => experiments::magic_test_function::add_search_no_test(),
         }
         return Ok(());
     }
 
     let mut soup = if cli.read_stdin {
         let mut soup = lambda::LambdaSoup::from_config(&config.reactor_config);
-        let expressions = read_inputs();
+        let expressions = utils::read_inputs();
         soup.add_lambda_expressions(expressions);
         soup
     } else {
