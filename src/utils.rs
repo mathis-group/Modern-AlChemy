@@ -1,5 +1,9 @@
 use std::cmp::Ord;
+use std::fs::File;
 use std::{fmt, num::ParseIntError};
+
+use lambda_calculus::Term;
+use std::io::{self, BufRead, BufReader, Write};
 
 // This was shamelessly stolen from
 // https://play.rust-lang.org/?version=stable&mode=debug&edition=2015&gist=e241493d100ecaadac3c99f37d0f766f
@@ -107,3 +111,37 @@ where
 }
 
 impl<U, T> Eq for HeapObject<U, T> where U: Ord {}
+
+/// Read lambda expressions from stdin and return an iterator over them
+pub fn read_inputs() -> impl Iterator<Item = Term> {
+    let mut expression_strings = Vec::<String>::new();
+    let stdin = io::stdin();
+    let reader = BufReader::new(stdin.lock());
+
+    for line in reader.lines() {
+        match line {
+            Ok(line) => expression_strings.push(line),
+            Err(_) => break,
+        }
+    }
+
+    let expressions = expression_strings
+        .iter()
+        .map(|s| lambda_calculus::parse(s, lambda_calculus::Classic).unwrap())
+        .collect::<Vec<Term>>();
+    expressions.into_iter()
+}
+
+pub fn dump_series_to_file<T>(fname: &str, series: T, id: usize) -> io::Result<()>
+where
+    T: IntoIterator,
+    <T as IntoIterator>::Item: fmt::Debug,
+{
+    let mut file = File::create(format!("{id}-{fname}.txt"))?;
+    write!(file, "{id}, ")?;
+    for i in series {
+        write!(file, "{:?}; ", i)?;
+    }
+    write!(file, "\n")?;
+    Ok(())
+}
