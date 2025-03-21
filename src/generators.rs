@@ -127,7 +127,11 @@ impl BTreeGen {
         v
     }
 
-    fn postfix_standardize(t: Term) -> Term {
+    pub fn seed(&self) -> [u8; 32] {
+        self.seed
+    }
+
+    fn postfix_standardize(_t: Term) -> Term {
         unimplemented!("Postfix standiardization is unimplimented!!!!");
     }
 
