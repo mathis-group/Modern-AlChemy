@@ -5,3 +5,5 @@ pub mod search_by_behavior;
 pub mod magic_test_function;
 
 pub mod distribution;
+
+pub mod kinetics;
