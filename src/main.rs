@@ -1,5 +1,6 @@
 use alchemy::{config, experiments, generators, lambda, utils};
 use clap::{Parser, ValueEnum};
+use experiments::{distribution, entropy, magic_test_function, search_by_behavior};
 use generators::BTreeGen;
 use lambda_calculus::Term;
 use std::fs::{read_to_string, File};
@@ -22,6 +23,7 @@ pub enum Experiment {
     // magic_test_function.rs
     AddSearchNoTest,
     AddSearchWithTest,
+    SuccSearchWithTest,
 }
 
 #[derive(Parser, Debug)]
@@ -140,17 +142,18 @@ fn main() -> std::io::Result<()> {
 
     if let Some(e) = cli.experiment {
         match e {
-            Experiment::EntropyAndFailures => experiments::entropy::entropy_and_failures(),
-            Experiment::SyncEntropyAndFailures => experiments::entropy::sync_entropy_and_failures(),
-            Experiment::EntropyTimeSeries => experiments::entropy::entropy_time_series(),
+            Experiment::EntropyAndFailures => entropy::entropy_and_failures(),
+            Experiment::SyncEntropyAndFailures => entropy::sync_entropy_and_failures(),
+            Experiment::EntropyTimeSeries => entropy::entropy_time_series(),
 
-            Experiment::XorsetSearch => experiments::search_by_behavior::look_for_xorset(),
-            Experiment::NotXorsetSearch => experiments::search_by_behavior::look_for_not_xorset(),
+            Experiment::XorsetSearch => search_by_behavior::look_for_xorset(),
+            Experiment::NotXorsetSearch => search_by_behavior::look_for_not_xorset(),
 
-            Experiment::DistributionTimeSeries => experiments::distribution::one_sample_with_dist(),
+            Experiment::DistributionTimeSeries => distribution::one_sample_with_dist(),
 
-            Experiment::AddSearchWithTest => experiments::magic_test_function::add_search_with_test(),
-            Experiment::AddSearchNoTest => experiments::magic_test_function::add_search_no_test(),
+            Experiment::AddSearchWithTest => magic_test_function::add_search_with_test(),
+            Experiment::SuccSearchWithTest => magic_test_function::succ_search_with_test(),
+            Experiment::AddSearchNoTest => magic_test_function::add_search_no_test(),
         }
         return Ok(());
     }

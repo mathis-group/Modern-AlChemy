@@ -1,4 +1,4 @@
-use async_std::task::{spawn, block_on};
+use async_std::task::{block_on, spawn};
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::reduction::Order::HAP;
 use lambda_calculus::{
@@ -71,7 +71,7 @@ fn p321() -> Term {
     abs!(3, app!(Var(3), Var(2), Var(1)))
 }
 
-fn test_add(a: usize, b: usize) -> Term {
+pub(super) fn test_add(a: usize, b: usize) -> Term {
     let mut test = parse(r"\eq. \a. \b. \ab. \f. (eq (f a b) ab)", Classic).unwrap();
     test = app!(
         test,
@@ -207,12 +207,48 @@ async fn add_magic_tests(
         populations.extend(pops);
         let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
         let tests = [
-            test_succ(random::<usize>() % 20),
-            test_add(random::<usize>() % 20, random::<usize>() % 20),
+            || test_succ(random::<usize>() % 20),
+            || test_add(random::<usize>() % 20, random::<usize>() % 20),
         ]
         .into_iter()
+        .map(|f| f())
         .cycle()
         .take(n_remaining);
+        soup.perturb_test_expressions(n_remaining, tests);
+        let skips = generate_skip_sample(ConfigSeed::new([i as u8; 32]));
+        soup.perturb_lambda_expressions(200, skips);
+
+        println!("Soup {id} {}0% done", i + 1);
+    }
+    (id, populations)
+}
+
+async fn succ_magic_tests(
+    sample: impl Iterator<Item = Term>,
+    tests: impl Iterator<Item = Term>,
+    id: usize,
+    run_length: usize,
+    polling_interval: usize,
+) -> (usize, Vec<(usize, usize, usize)>) {
+    let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
+    soup.add_lambda_expressions(sample);
+    soup.add_test_expressions(tests);
+    let mut populations = Vec::new();
+    for i in 0..10 {
+        let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
+            (
+                s.expressions().filter(|e| e.is_recursive()).count(),
+                s.population_of(&succ()),
+                s.population_of(&add()),
+            )
+        });
+        populations.extend(pops);
+        let n_remaining = 1000 - soup.expressions().filter(|e| e.is_recursive()).count();
+        let tests = [|| test_succ(random::<usize>() % 20)]
+            .into_iter()
+            .map(|f| f())
+            .cycle()
+            .take(n_remaining);
         soup.perturb_test_expressions(n_remaining, tests);
         let skips = generate_skip_sample(ConfigSeed::new([i as u8; 32]));
         soup.perturb_lambda_expressions(200, skips);
@@ -230,17 +266,12 @@ async fn simulate_additive_murder(
 ) -> (usize, Vec<usize>) {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
     soup.add_lambda_expressions(sample);
-    let add = parse(
-        r"\m.\n. m ((\m.\n. m (\n.\x.\y. x (n x y)) n) n) (\x.\y.y)",
-        Classic,
-    )
-    .unwrap();
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
             (
                 s.collisions(),
                 s.expressions()
-                    .any(|e| e.get_underlying_term().is_isomorphic_to(&add)),
+                    .any(|e| e.get_underlying_term().is_isomorphic_to(&add())),
             )
         });
     (id, check_series)
@@ -280,13 +311,14 @@ pub fn add_search_with_test() {
         dump_sample(&sample);
 
         let distribution = sample.clone().into_iter().cycle().take(5000);
-        let tests = (0..500)
-            .map(|_| {
-                let adds = test_add(random::<usize>() % 20, random::<usize>() % 20);
-                let sccs = test_succ(random::<usize>() % 20);
-                [adds, sccs]
-            })
-            .flatten();
+        let tests = [
+            || test_succ(random::<usize>() % 20),
+            || test_add(random::<usize>() % 20, random::<usize>() % 20),
+        ]
+        .into_iter()
+        .map(|f| f())
+        .cycle()
+        .take(1000);
         futures.push(spawn(add_magic_tests(
             distribution,
             tests,
@@ -296,7 +328,36 @@ pub fn add_search_with_test() {
         )));
     }
 
-    let fname = "output";
+    let fname = "add-search-output";
+    while let Some((id, series)) = block_on(futures.next()) {
+        dump_series_to_file(fname, series, id).expect("Cannot write to file");
+    }
+}
+
+pub fn succ_search_with_test() {
+    let mut futures = FuturesUnordered::new();
+    let run_length = 100000;
+    let polling_interval = 1000;
+    for i in 0..16 {
+        let sample = generate_ski_sample(ConfigSeed::new([i as u8; 32]));
+        dump_sample(&sample);
+
+        let distribution = sample.clone().into_iter().cycle().take(5000);
+        let tests = [|| test_succ(random::<usize>() % 20)]
+            .into_iter()
+            .map(|f| f())
+            .cycle()
+            .take(1000);
+        futures.push(spawn(succ_magic_tests(
+            distribution,
+            tests,
+            i,
+            run_length,
+            polling_interval,
+        )));
+    }
+
+    let fname = "scc-search-output";
     while let Some((id, series)) = block_on(futures.next()) {
         dump_series_to_file(fname, series, id).expect("Cannot write to file");
     }
