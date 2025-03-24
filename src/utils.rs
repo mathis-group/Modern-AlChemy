@@ -1,8 +1,8 @@
 use std::cmp::Ord;
-use std::fs::File;
 use std::{fmt, num::ParseIntError};
 
 use lambda_calculus::Term;
+use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
 
 // This was shamelessly stolen from
@@ -132,13 +132,15 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
     expressions.into_iter()
 }
 
-pub fn dump_series_to_file<T>(fname: &str, series: T, id: usize) -> io::Result<()>
+pub fn dump_series_to_file<T>(fname: &str, series: &[T], id: &[usize]) -> io::Result<()>
 where
-    T: IntoIterator,
-    <T as IntoIterator>::Item: fmt::Debug,
+    T: fmt::Debug,
 {
-    let mut file = File::create(format!("{id}-{fname}.txt"))?;
-    write!(file, "{id}, ")?;
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(format!("{fname}.txt"))?;
+    write!(file, "{id:?}; ")?;
     for i in series {
         write!(file, "{:?}; ", i)?;
     }
