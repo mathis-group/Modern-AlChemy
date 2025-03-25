@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH -N 1            # number of nodes
-#SBATCH -c 48            # number of cores
-#SBATCH -t 0-02:00:00   # time in d-hh:mm:ss
+#SBATCH -c 128          # number of cores
+#SBATCH -t 0-12:00:00   # time in d-hh:mm:ss
 #SBATCH -p general      # partition
 #SBATCH -q public       # QOS
 #SBATCH -o slurm.%j.out # file to save job's STDOUT (%j = JobId)
