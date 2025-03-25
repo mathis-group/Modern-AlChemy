@@ -48,10 +48,11 @@ where
 {
     let mut soup = experiment_soup(params.seed);
 
+    let prefix_iter = prefix.iter().cycle();
     let sample_iter = sample.iter().cycle();
     let test_iter = tests.iter().cycle().map(|f| f());
 
-    soup.add_lambda_expressions(prefix.iter().cloned().take(n_prefix));
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
     soup.add_lambda_expressions(sample_iter.cloned().take(n_samples));
     soup.add_test_expressions(test_iter.clone().take(n_tests));
 
@@ -98,7 +99,7 @@ pub fn kinetic_succ_experiment() {
 
                 let goods = vec![succ()];
                 let tests = vec![|| test_succ(random::<usize>() % 20)];
-                let sample = asymmetric_skip_sample(ConfigSeed::new([seed as u8; 32]));
+                let samples = asymmetric_skip_sample(ConfigSeed::new([seed as u8; 32]));
 
                 let params = TestParams {
                     id: vec![i, j, seed],
@@ -110,7 +111,7 @@ pub fn kinetic_succ_experiment() {
                 };
 
                 let run =
-                    generalized_magic_test(goods, sample, tests, n_good, n_rest, n_test, params);
+                    generalized_magic_test(goods, samples, tests, n_good, n_rest, n_test, params);
                 futures.push(spawn(run));
             }
         }
