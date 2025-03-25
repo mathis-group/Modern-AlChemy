@@ -34,6 +34,9 @@ struct TestParams {
     count_each_poll: Vec<Term>,
 }
 
+// Returns (id, populations), where id is a vec of usizes and populations is a vec of
+// (count, isomorphics). Here, count is the current population of recursive functions in the soup,
+// and isomorphics is a list of populations of terms isomorphic to terms in params.count_each_poll.
 async fn generalized_magic_test<F>(
     prefix: Vec<Term>,
     sample: Vec<Term>,

@@ -1,6 +1,8 @@
 use alchemy::{config, experiments, generators, lambda, utils};
 use clap::{Parser, ValueEnum};
-use experiments::{distribution, entropy, kinetics, magic_test_function, search_by_behavior};
+use experiments::{
+    discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
+};
 use generators::BTreeGen;
 use lambda_calculus::Term;
 use std::fs::{read_to_string, File};
@@ -25,7 +27,11 @@ pub enum Experiment {
     AddSearchWithTest,
     SuccSearchWithTest,
 
+    // kinetics.rs
     SuccKinetics,
+
+    // discovery.rs
+    MeasureInitialPopulation,
 }
 
 #[derive(Parser, Debug)]
@@ -158,6 +164,7 @@ fn main() -> std::io::Result<()> {
             Experiment::AddSearchNoTest => magic_test_function::add_search_no_test(),
 
             Experiment::SuccKinetics => kinetics::kinetic_succ_experiment(),
+            Experiment::MeasureInitialPopulation => discovery::measure_initial_population(),
         }
         return Ok(());
     }
