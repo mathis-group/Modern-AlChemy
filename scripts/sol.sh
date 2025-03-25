@@ -11,6 +11,6 @@
 #SBATCH --mail-user="%u@asu.edu"
 #SBATCH --export=NONE   # Purge the job-submitting shell environment
 
-module rust/1.82.0
+module load rust/1.82.0
 cd ~/cwd/functional-supercollider
-cargo run --release -- --experiment succ-kinetic
+cargo run --release -- --experiment succ-kinetics
