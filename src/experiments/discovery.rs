@@ -55,7 +55,7 @@ where
 {
     let mut futures = FuturesUnordered::new();
     let sample_size = 5000;
-    for i in 0..100 {
+    for i in 0..1000 {
         let random_seed = ConfigSeed::new(random::<[u8; 32]>());
         let samples = sample_generator();
 
@@ -88,7 +88,7 @@ fn parallel_test_run_executor<F, T>(
     let mut futures = FuturesUnordered::new();
     let sample_size = 4000;
     let test_size = 1000;
-    for i in 0..100 {
+    for i in 0..1000 {
         let random_seed = ConfigSeed::new(random::<[u8; 32]>());
         let samples = sample_generator();
 
