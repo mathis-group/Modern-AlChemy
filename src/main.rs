@@ -32,6 +32,15 @@ pub enum Experiment {
 
     // discovery.rs
     MeasureInitialPopulation,
+    AddSccPopulationFromRandomInputs,
+    AddSccPopulationFromSkiInputs,
+    AddSccPopulationFromSkipInputs,
+    SccPopulationFromRandomInputsWithTests,
+    AddPopulationFromRandomInputsWithTests,
+    AddPopulationFromRandomInputsWithAddSuccTests,
+    SccPopulationFromSkiInputsWithTests,
+    AddPopulationFromSkiInputsWithTests,
+    AddPopulationFromSkiInputsWithAddSuccTests,
 }
 
 #[derive(Parser, Debug)]
@@ -164,7 +173,35 @@ fn main() -> std::io::Result<()> {
             Experiment::AddSearchNoTest => magic_test_function::add_search_no_test(),
 
             Experiment::SuccKinetics => kinetics::kinetic_succ_experiment(),
+
             Experiment::MeasureInitialPopulation => discovery::measure_initial_population(),
+            Experiment::AddSccPopulationFromRandomInputs => {
+                discovery::add_scc_population_from_random_inputs()
+            }
+            Experiment::AddSccPopulationFromSkiInputs => {
+                discovery::add_scc_population_from_ski_inputs()
+            }
+            Experiment::AddSccPopulationFromSkipInputs => {
+                discovery::add_scc_population_from_skip_inputs()
+            }
+            Experiment::SccPopulationFromRandomInputsWithTests => {
+                discovery::scc_population_from_random_inputs_with_tests()
+            }
+            Experiment::AddPopulationFromRandomInputsWithTests => {
+                discovery::add_population_from_random_inputs_with_tests()
+            }
+            Experiment::AddPopulationFromRandomInputsWithAddSuccTests => {
+                discovery::add_population_from_random_inputs_with_add_succ_tests()
+            }
+            Experiment::SccPopulationFromSkiInputsWithTests => {
+                discovery::scc_population_from_ski_inputs_with_tests()
+            }
+            Experiment::AddPopulationFromSkiInputsWithTests => {
+                discovery::add_population_from_ski_inputs_with_tests()
+            }
+            Experiment::AddPopulationFromSkiInputsWithAddSuccTests => {
+                discovery::add_population_from_ski_inputs_with_add_succ_tests()
+            }
         }
         return Ok(());
     }
