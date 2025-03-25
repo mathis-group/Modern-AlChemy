@@ -25,26 +25,26 @@ fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     })
 }
 
-struct TestParams {
-    id: Vec<usize>,
-    seed: ConfigSeed,
-    run_length: usize,
-    polling_interval: usize,
-    perturbation_interval: usize,
-    count_each_poll: Vec<Term>,
+pub(super) struct RunParams {
+    pub id: Vec<usize>,
+    pub seed: ConfigSeed,
+    pub run_length: usize,
+    pub polling_interval: usize,
+    pub perturbation_interval: usize,
+    pub count_each_poll: Vec<Term>,
 }
 
 // Returns (id, populations), where id is a vec of usizes and populations is a vec of
 // (count, isomorphics). Here, count is the current population of recursive functions in the soup,
 // and isomorphics is a list of populations of terms isomorphic to terms in params.count_each_poll.
-async fn generalized_magic_test<F>(
+pub(super) async fn general_test_run<F>(
     prefix: Vec<Term>,
     sample: Vec<Term>,
     tests: Vec<F>,
     n_prefix: usize,
     n_samples: usize,
     n_tests: usize,
-    params: TestParams,
+    params: RunParams,
 ) -> (Vec<usize>, Vec<(usize, Vec<usize>)>)
 where
     F: Fn() -> Term,
@@ -86,6 +86,45 @@ where
     (params.id, populations)
 }
 
+pub(super) async fn general_run(
+    prefix: Vec<Term>,
+    sample: Vec<Term>,
+    n_prefix: usize,
+    n_samples: usize,
+    params: RunParams,
+) -> (Vec<usize>, Vec<(usize, Vec<usize>)>) {
+    let mut soup = experiment_soup(params.seed);
+
+    let prefix_iter = prefix.iter().cycle();
+    let sample_iter = sample.iter().cycle();
+
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
+    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples));
+
+    let populations = (0..params.perturbation_interval)
+        .flat_map(|i| {
+            let pops = soup.simulate_and_poll(
+                params.run_length / params.perturbation_interval,
+                params.polling_interval,
+                false,
+                |s| {
+                    let isomorphics = params
+                        .count_each_poll
+                        .iter()
+                        .map(|t| s.population_of(t))
+                        .collect();
+                    let n_recursive = s.expressions().filter(|e| e.is_recursive()).count();
+                    (n_recursive, isomorphics)
+                },
+            );
+
+            println!("Soup {:?} {}0% done", params.id, i + 1);
+            pops
+        })
+        .collect();
+    (params.id, populations)
+}
+
 pub fn kinetic_succ_experiment() {
     let mut futures = FuturesUnordered::new();
 
@@ -104,7 +143,7 @@ pub fn kinetic_succ_experiment() {
                 let tests = vec![|| test_succ(random::<usize>() % 20)];
                 let samples = asymmetric_skip_sample(ConfigSeed::new([seed as u8; 32]));
 
-                let params = TestParams {
+                let params = RunParams {
                     id: vec![i, j, seed],
                     seed: ConfigSeed::new([seed as u8; 32]),
                     count_each_poll: vec![succ()],
@@ -113,8 +152,7 @@ pub fn kinetic_succ_experiment() {
                     run_length: 100000,
                 };
 
-                let run =
-                    generalized_magic_test(goods, samples, tests, n_good, n_rest, n_test, params);
+                let run = general_test_run(goods, samples, tests, n_good, n_rest, n_test, params);
                 futures.push(spawn(run));
             }
         }
