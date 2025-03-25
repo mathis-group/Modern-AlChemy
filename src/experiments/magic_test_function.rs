@@ -166,8 +166,12 @@ pub(super) fn asymmetric_skip_sample(_: ConfigSeed) -> Vec<Term> {
     sample
 }
 
-pub(super) fn symmetric_skip_sample(_: ConfigSeed) -> Vec<Term> {
+pub(super) fn symmetric_skip_sample() -> Vec<Term> {
     vec![S(), K(), I(), p132()]
+}
+
+pub(super) fn ski_sample() -> Vec<Term> {
+    vec![S(), K(), I()]
 }
 
 fn dump_sample(sample: &Vec<Term>) {
