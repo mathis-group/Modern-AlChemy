@@ -13,13 +13,13 @@
 
 module load rust/1.82.0
 cd ~/cwd/functional-supercollider
-cargo run --release -- --experiment measure-initial-population,
-cargo run --release -- --experiment add-scc-population-from-random-inputs,
-cargo run --release -- --experiment add-scc-population-from-ski-inputs,
-cargo run --release -- --experiment add-scc-population-from-skip-inputs,
-cargo run --release -- --experiment scc-population-from-random-inputs-with-tests,
-cargo run --release -- --experiment add-population-from-random-inputs-with-tests,
-cargo run --release -- --experiment add-population-from-random-inputs-with-add-succ-tests,
-cargo run --release -- --experiment scc-population-from-ski-inputs-with-tests,
-cargo run --release -- --experiment add-population-from-ski-inputs-with-tests,
-cargo run --release -- --experiment add-population-from-ski-inputs-with-add-succ-tests,
+cargo run --release -- --experiment measure-initial-population
+cargo run --release -- --experiment add-scc-population-from-random-inputs
+cargo run --release -- --experiment add-scc-population-from-ski-inputs
+cargo run --release -- --experiment add-scc-population-from-skip-inputs
+cargo run --release -- --experiment scc-population-from-random-inputs-with-tests
+cargo run --release -- --experiment add-population-from-random-inputs-with-tests
+cargo run --release -- --experiment add-population-from-random-inputs-with-add-succ-tests
+cargo run --release -- --experiment scc-population-from-ski-inputs-with-tests
+cargo run --release -- --experiment add-population-from-ski-inputs-with-tests
+cargo run --release -- --experiment add-population-from-ski-inputs-with-add-succ-tests
