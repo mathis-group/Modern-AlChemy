@@ -2,6 +2,7 @@
 
 #SBATCH -N 1            # number of nodes
 #SBATCH -c 128          # number of cores
+#SBATCH --mem=64G       # memory limit
 #SBATCH -t 0-12:00:00   # time in d-hh:mm:ss
 #SBATCH -p general      # partition
 #SBATCH -q public       # QOS
