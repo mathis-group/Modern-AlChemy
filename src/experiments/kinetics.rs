@@ -4,10 +4,13 @@ use lambda_calculus::{data::num::binary::succ, Term};
 use rand::random;
 
 use crate::{
-    config::{self, ConfigSeed}, experiments::magic_test_function::ski_sample, lambda::LambdaSoup, utils::dump_series_to_file
+    config::{self, ConfigSeed},
+    experiments::magic_test_function::ski_sample,
+    lambda::LambdaSoup,
+    utils::dump_series_to_file,
 };
 
-use super::magic_test_function::{asymmetric_skip_sample, test_succ};
+use super::magic_test_function::{test_succ, test_succ_seq};
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
@@ -76,7 +79,6 @@ where
 
             let n_remaining = n_tests - soup.expressions().filter(|e| e.is_recursive()).count();
             soup.perturb_test_expressions(n_remaining, test_iter.clone().take(n_remaining));
-            soup.perturb_lambda_expressions(200, ski_sample());
             println!("Soup {:?} {}0% done", params.id, i + 1);
 
             pops
@@ -139,7 +141,7 @@ pub fn kinetic_succ_experiment() {
                 let n_rest = sample_size - (n_good + n_test);
 
                 let goods = vec![succ()];
-                let tests = vec![|| test_succ(random::<usize>() % 20)];
+                let tests = vec![|| test_succ_seq((0..4).map(|_| random::<usize>() % 20))];
                 let samples = ski_sample();
                 let params = RunParams {
                     id: vec![i, j, seed],

@@ -110,7 +110,7 @@ pub(super) fn test_succ(a: usize) -> Term {
     test
 }
 
-fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
+pub(super) fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
     let mut test = parse(r"\f. \a. \b. a", Classic).unwrap();
     for u in nums {
         let gut = parse(
