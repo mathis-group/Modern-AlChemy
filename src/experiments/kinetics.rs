@@ -6,7 +6,7 @@ use rand::random;
 use crate::{
     config::{self, ConfigSeed},
     experiments::magic_test_function::ski_sample,
-    lambda::LambdaSoup,
+    lambda::recursive::LambdaSoup,
     utils::dump_series_to_file,
 };
 

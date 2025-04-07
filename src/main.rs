@@ -114,7 +114,7 @@ fn get_config(cli: &Cli) -> std::io::Result<config::Config> {
     Ok(config)
 }
 
-pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::LambdaSoup {
+pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recursive::LambdaSoup {
     let expressions = match &cfg.generator_config {
         config::Generator::BTree(gen_cfg) => {
             let mut gen = generators::BTreeGen::from_config(gen_cfg);
@@ -127,7 +127,7 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::Lambd
                 .collect::<Vec<Term>>()
         }
     };
-    let mut soup = lambda::LambdaSoup::from_config(&cfg.reactor_config);
+    let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg.reactor_config);
     soup.add_lambda_expressions(expressions);
     soup
 }
@@ -207,7 +207,7 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut soup = if cli.read_stdin {
-        let mut soup = lambda::LambdaSoup::from_config(&config.reactor_config);
+        let mut soup = lambda::recursive::LambdaSoup::from_config(&config.reactor_config);
         let expressions = utils::read_inputs();
         soup.add_lambda_expressions(expressions);
         soup

@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use crate::lambda::LambdaSoup;
+use crate::lambda::recursive::LambdaSoup;
 use crate::utils::HeapObject;
 
 use lambda_calculus::Term;

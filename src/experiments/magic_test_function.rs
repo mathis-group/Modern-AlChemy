@@ -18,7 +18,7 @@ use rand::random;
 use crate::{
     config::{self, ConfigSeed},
     generators::BTreeGen,
-    lambda::{has_two_args, is_truthy, uses_both_arguments, LambdaSoup},
+    lambda::recursive::{has_two_args, is_truthy, uses_both_arguments, LambdaSoup},
     utils::{dump_series_to_file, read_inputs},
 };
 

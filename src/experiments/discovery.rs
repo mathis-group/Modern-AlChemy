@@ -9,7 +9,7 @@ use rand::random;
 use crate::{
     config::{self, ConfigSeed},
     generators::BTreeGen,
-    lambda::reduce_with_limit,
+    lambda::recursive::reduce_with_limit,
     utils::dump_series_to_file,
 };
 

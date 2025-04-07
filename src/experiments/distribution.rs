@@ -4,7 +4,7 @@ use lambda_calculus::Term;
 
 use crate::{
     config::{self, ConfigSeed},
-    lambda::LambdaSoup,
+    lambda::recursive::LambdaSoup,
     utils::read_inputs,
 };
 

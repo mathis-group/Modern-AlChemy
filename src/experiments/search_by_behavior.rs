@@ -5,7 +5,7 @@ use lambda_calculus::{app, Term};
 use crate::{
     config::{self, ConfigSeed},
     generators::BTreeGen,
-    lambda::{reduce_with_limit, LambdaSoup},
+    lambda::recursive::{reduce_with_limit, LambdaSoup},
 };
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
