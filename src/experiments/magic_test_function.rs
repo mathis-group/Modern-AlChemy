@@ -157,7 +157,7 @@ fn generate_sample_for_addsearch(seed: ConfigSeed) -> Vec<Term> {
     sample
 }
 
-pub(super) fn asymmetric_skip_sample(_: ConfigSeed) -> Vec<Term> {
+pub(super) fn asymmetric_skip_sample() -> Vec<Term> {
     let mut sample = vec![];
     sample.append(&mut vec![S(); 10]);
     sample.append(&mut vec![K(); 10]);
@@ -219,7 +219,7 @@ async fn add_magic_tests(
         .cycle()
         .take(n_remaining);
         soup.perturb_test_expressions(n_remaining, tests);
-        let skips = asymmetric_skip_sample(ConfigSeed::new([i as u8; 32]));
+        let skips = asymmetric_skip_sample();
         soup.perturb_lambda_expressions(200, skips);
 
         println!("Soup {id} {}0% done", i + 1);
@@ -254,7 +254,7 @@ async fn succ_magic_tests(
             .cycle()
             .take(n_remaining);
         soup.perturb_test_expressions(n_remaining, tests);
-        let skips = asymmetric_skip_sample(ConfigSeed::new([i as u8; 32]));
+        let skips = asymmetric_skip_sample();
         soup.perturb_lambda_expressions(200, skips);
 
         println!("Soup {id} {}0% done", i + 1);
@@ -311,7 +311,7 @@ pub fn add_search_with_test() {
     let run_length = 100000;
     let polling_interval = 1000;
     for i in 0..16 {
-        let sample = asymmetric_skip_sample(ConfigSeed::new([i as u8; 32]));
+        let sample = asymmetric_skip_sample();
         dump_sample(&sample);
 
         let distribution = sample.clone().into_iter().cycle().take(5000);
@@ -343,7 +343,7 @@ pub fn succ_search_with_test() {
     let run_length = 100000;
     let polling_interval = 1000;
     for i in 0..16 {
-        let sample = asymmetric_skip_sample(ConfigSeed::new([i as u8; 32]));
+        let sample = asymmetric_skip_sample();
         dump_sample(&sample);
 
         let distribution = sample.clone().into_iter().cycle().take(5000);

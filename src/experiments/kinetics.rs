@@ -1,16 +1,15 @@
 use async_std::task::{block_on, spawn};
 use futures::stream::{FuturesUnordered, StreamExt};
-use lambda_calculus::{data::num::binary::succ, Term};
+use lambda_calculus::{data::num::church::succ, Term};
 use rand::random;
 
 use crate::{
     config::{self, ConfigSeed},
-    experiments::magic_test_function::ski_sample,
     lambda::recursive::LambdaSoup,
     utils::dump_series_to_file,
 };
 
-use super::magic_test_function::{test_succ, test_succ_seq};
+use super::magic_test_function::{asymmetric_skip_sample, test_succ};
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&config::Reactor {
@@ -32,6 +31,7 @@ pub(super) struct RunParams {
     pub run_length: usize,
     pub polling_interval: usize,
     pub perturbation_interval: usize,
+    pub perturbation_size: usize,
     pub count_each_poll: Vec<Term>,
 }
 
@@ -53,11 +53,11 @@ where
     let mut soup = experiment_soup(params.seed);
 
     let prefix_iter = prefix.iter().cycle();
-    let sample_iter = sample.iter().cycle();
+    let sample_iter = sample.into_iter().cycle();
     let test_iter = tests.iter().cycle().map(|f| f());
 
     soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
-    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples));
+    soup.add_lambda_expressions(sample_iter.clone().take(n_samples));
     soup.add_test_expressions(test_iter.clone().take(n_tests));
 
     let populations = (0..params.perturbation_interval)
@@ -79,6 +79,7 @@ where
 
             let n_remaining = n_tests - soup.expressions().filter(|e| e.is_recursive()).count();
             soup.perturb_test_expressions(n_remaining, test_iter.clone().take(n_remaining));
+            soup.perturb_lambda_expressions(params.perturbation_size, sample_iter.clone());
             println!("Soup {:?} {}0% done", params.id, i + 1);
 
             pops
@@ -141,8 +142,8 @@ pub fn kinetic_succ_experiment() {
                 let n_rest = sample_size - (n_good + n_test);
 
                 let goods = vec![succ()];
-                let tests = vec![|| test_succ_seq((0..4).map(|_| random::<usize>() % 20))];
-                let samples = ski_sample();
+                let tests = vec![|| test_succ(random::<usize>() % 20)];
+                let samples = asymmetric_skip_sample();
                 let params = RunParams {
                     id: vec![i, j, seed],
                     seed: ConfigSeed::new([seed as u8; 32]),
@@ -150,6 +151,7 @@ pub fn kinetic_succ_experiment() {
                     perturbation_interval: 10,
                     polling_interval: 1000,
                     run_length: 100000,
+                    perturbation_size: 200,
                 };
 
                 let run = general_test_run(goods, samples, tests, n_good, n_rest, n_test, params);

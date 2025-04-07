@@ -66,6 +66,7 @@ where
             perturbation_interval: 10,
             polling_interval: 1000,
             run_length: 100000,
+            perturbation_size: 0,
         };
 
         let run = general_run(vec![], samples, 0, sample_size, params);
@@ -99,6 +100,7 @@ fn parallel_test_run_executor<F, T>(
             perturbation_interval: 10,
             polling_interval: 1000,
             run_length: 100000,
+            perturbation_size: 0,
         };
 
         let run = general_test_run(
