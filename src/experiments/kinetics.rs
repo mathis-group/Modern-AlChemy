@@ -131,8 +131,8 @@ pub fn kinetic_succ_experiment() {
     let mut futures = FuturesUnordered::new();
 
     let sample_size = 5000;
-    let good_fracs = [0.0002, 0.001, 0.02, 0.1, 0.5];
-    let test_fracs = [0.10, 0.20, 0.30, 0.40];
+    let good_fracs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128, 0.0256, 0.0512, 0.1024];
+    let test_fracs = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40];
 
     for (i, good_frac) in good_fracs.iter().enumerate() {
         for (j, test_frac) in test_fracs.iter().enumerate() {
