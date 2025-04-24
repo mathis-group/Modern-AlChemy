@@ -36,11 +36,11 @@ fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     })
 }
 
-fn coadd() -> Term {
+pub fn coadd() -> Term {
     abs!(2, app!(Var(2), succ(), Var(1)))
 }
 
-fn addtwo() -> Term {
+pub fn addtwo() -> Term {
     let mut comp = app!(succ(), succ());
     comp.reduce(HAP, 0);
     comp
@@ -127,7 +127,7 @@ pub(super) fn test_succ_seq(nums: impl Iterator<Item = usize>) -> Term {
     test
 }
 
-fn test_addtwo(a: usize) -> Term {
+pub fn test_addtwo(a: usize) -> Term {
     let mut test = parse(r"\eq. \a. \asucc. \f. (eq (f a) asucc)", Classic).unwrap();
     test = app!(test, eq(), a.into_church(), (a + 2).into_church());
     // `test` has type (church -> church) -> bool

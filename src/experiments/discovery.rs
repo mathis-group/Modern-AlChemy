@@ -15,7 +15,9 @@ use crate::{
 
 use super::{
     kinetics::{general_run, general_test_run, RunParams},
-    magic_test_function::{ski_sample, symmetric_skip_sample, test_add, test_succ},
+    magic_test_function::{
+        addtwo, coadd, ski_sample, symmetric_skip_sample, test_add, test_addtwo, test_succ,
+    },
 };
 
 fn experiment_gen(seed: ConfigSeed) -> BTreeGen {
@@ -188,6 +190,7 @@ pub fn add_population_from_random_inputs_with_add_succ_tests() {
     )
 }
 
+// Successor sawtooth figure
 pub fn scc_population_from_ski_inputs_with_tests() {
     let tests = vec![|| test_succ(random::<usize>() % 20)];
     parallel_test_run_executor(
@@ -208,14 +211,54 @@ pub fn add_population_from_ski_inputs_with_tests() {
     )
 }
 
+// Add sawtooth figure (ski, atomic)
 pub fn add_population_from_ski_inputs_with_add_succ_tests() {
     let tests = vec![
         || test_add(random::<usize>() % 20, random::<usize>() % 20),
         || test_succ(random::<usize>() % 20),
     ];
     parallel_test_run_executor(
-        "scc_random_pop_series_test",
-        &[succ(), add()],
+        "add_ski_addsucc_tests",
+        &[succ(), add(), coadd()],
+        || ski_sample(),
+        tests,
+    )
+}
+
+// Add sawtooth figure (ski, batched)
+pub fn add_population_from_ski_inputs_with_batchedadd_succ_tests() {
+    let tests = vec![
+        || test_add(random::<usize>() % 20, random::<usize>() % 20),
+        || test_succ(random::<usize>() % 20),
+    ];
+    parallel_test_run_executor(
+        "add_ski_batchedaddsucc_tests",
+        &[succ(), add(), coadd()],
+        || ski_sample(),
+        tests,
+    )
+}
+
+// Add sawtooth figure (skip, atomic)
+pub fn add_population_from_skip_inputs_with_add_succ_tests() {
+    let tests = vec![
+        || test_add(random::<usize>() % 20, random::<usize>() % 20),
+        || test_succ(random::<usize>() % 20),
+    ];
+    parallel_test_run_executor(
+        "add_skip_addsucc_tests",
+        &[succ(), add(), coadd()],
+        || symmetric_skip_sample(),
+        tests,
+    )
+}
+
+// Addtwo sawtooth figure
+pub fn addtwo_population_from_ski_inputs_with_addtwo_tests() {
+    let tests = vec![|| test_addtwo(random::<usize>() % 20)];
+    parallel_test_run_executor(
+        "addtwo_ski_addtwo_tests",
+        &[succ(), addtwo()],
         || ski_sample(),
         tests,
     )

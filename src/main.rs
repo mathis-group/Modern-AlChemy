@@ -41,6 +41,9 @@ pub enum Experiment {
     SccPopulationFromSkiInputsWithTests,
     AddPopulationFromSkiInputsWithTests,
     AddPopulationFromSkiInputsWithAddSuccTests,
+    AddPopulationFromSkiInputsWithBatchedAddSuccTests,
+    AddtwoPopulationFromSkiInputsWithAddtwoTests,
+    AddPopulationFromSkipInputsWithAddSuccTests,
 }
 
 #[derive(Parser, Debug)]
@@ -201,6 +204,15 @@ fn main() -> std::io::Result<()> {
             }
             Experiment::AddPopulationFromSkiInputsWithAddSuccTests => {
                 discovery::add_population_from_ski_inputs_with_add_succ_tests()
+            }
+            Experiment::AddtwoPopulationFromSkiInputsWithAddtwoTests => {
+                discovery::add_population_from_ski_inputs_with_add_succ_tests()
+            }
+            Experiment::AddPopulationFromSkiInputsWithBatchedAddSuccTests => {
+                discovery::add_population_from_ski_inputs_with_batchedadd_succ_tests()
+            }
+            Experiment::AddPopulationFromSkipInputsWithAddSuccTests => {
+                discovery::add_population_from_skip_inputs_with_add_succ_tests()
             }
         }
         return Ok(());
