@@ -14,4 +14,4 @@
 
 module load rust/1.82.0
 cd ~/cwd/functional-supercollider
-cargo run --release -- --experiment add-population-from-skip-inputs-with-addsucc-tests
+cargo run --release -- --experiment add-population-from-skip-inputs-with-add-succ-tests
