@@ -206,7 +206,7 @@ fn main() -> std::io::Result<()> {
                 discovery::add_population_from_ski_inputs_with_add_succ_tests()
             }
             Experiment::AddtwoPopulationFromSkiInputsWithAddtwoTests => {
-                discovery::add_population_from_ski_inputs_with_add_succ_tests()
+                discovery::addtwo_population_from_ski_inputs_with_addtwo_tests()
             }
             Experiment::AddPopulationFromSkiInputsWithBatchedAddSuccTests => {
                 discovery::add_population_from_ski_inputs_with_batchedadd_succ_tests()
