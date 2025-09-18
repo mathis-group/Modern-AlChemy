@@ -26,3 +26,8 @@ Documentation:
 * Help: `cargo run -- --help`
 
 The documentation for the configuration file is in the `Config` object.
+
+
+# Interactive Dashboard
+
+Can be found here: https://github.com/mathis-group/Alchemy-Dashboard
