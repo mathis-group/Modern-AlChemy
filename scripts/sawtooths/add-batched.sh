@@ -14,4 +14,4 @@
 
 module load rust/1.82.0
 cd ~/cwd/functional-supercollider
-cargo run --release -- --experiment add-population-from-ski-inputs-with-batched-addsucc-tests
+cargo run --release -- --experiment add-population-from-ski-inputs-with-batched-add-succ-tests

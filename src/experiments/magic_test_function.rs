@@ -41,7 +41,7 @@ pub fn coadd() -> Term {
 }
 
 pub fn addtwo() -> Term {
-    let mut comp = app!(succ(), succ());
+    let mut comp = abs!(1, app!(succ(), app!(succ(), Var(1))));
     comp.reduce(HAP, 0);
     comp
 }
@@ -364,5 +364,31 @@ pub fn succ_search_with_test() {
     let fname = "scc-search-output";
     while let Some((id, series)) = block_on(futures.next()) {
         dump_series_to_file(fname, &series, &[id]).expect("Cannot write to file");
+    }
+}
+
+mod tests {
+    use lambda_calculus::{
+        app, data::boolean::tru, data::num::church::add, reduction::Order::HNO, IntoChurchNum,
+    };
+
+    use crate::experiments::magic_test_function::{addtwo, test_addtwo, test_succ};
+
+    use super::test_add;
+
+    #[test]
+    fn add_test_reduces() {
+        let add_test = test_add(3, 4);
+        let mut comp = app!(add_test, add());
+        comp.reduce(HNO, 0);
+        assert!(comp.is_isomorphic_to(&tru()))
+    }
+
+    #[test]
+    fn addtwo_test_reduces() {
+        let add_test = test_addtwo(3);
+        let mut comp = app!(add_test, addtwo());
+        comp.reduce(HNO, 0);
+        assert!(comp.is_isomorphic_to(&tru()))
     }
 }
