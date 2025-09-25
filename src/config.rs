@@ -225,7 +225,7 @@ impl Config {
 /// to ser/de to/from a hex string.
 #[warn(missing_docs)]
 #[derive(Debug, Clone, Copy)]
-pub struct ConfigSeed(Option<[u8; 32]>);
+pub struct ConfigSeed(pub Option<[u8; 32]>);
 
 impl ConfigSeed {
     /// Get the seed item

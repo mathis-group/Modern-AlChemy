@@ -5,11 +5,13 @@ use serde::{Deserialize, Serialize};
 
 // --- Module Imports ---
 mod config;
-mod soup;
+mod supercollider;
 mod experiments;
 mod generators;
 mod utils;
 mod analysis;
+mod lambda;
+
 
 use lambda_calculus::{parse, term::Notation::Classic, Term};
 use std::io::{self, BufRead};
@@ -25,17 +27,17 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
 
 // --- Exposing Core Configurations ---
 use crate::config::{Reactor as RustReactor, ConfigSeed};
-use crate::soup::{Soup, ReactionError};
+use crate::supercollider::Soup;
 use crate::generators::{BTreeGen as RustBTreeGen, FontanaGen as RustFontanaGen, Standardization as RustStandardization};
 use crate::utils::{decode_hex, encode_hex};
-use crate::experiments::{look_for_add, entropy_series, entropy_test, sync_entropy_test};
-
+//use crate::experiments::{look_for_add, entropy_series, entropy_test, sync_entropy_test};
+use crate::lambda::lambda::LambdaCollisionError;
 
 // --- Error Handling Wrappers ---
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct PyReactionError {
-    kind: ReactionErrorKind,
+    kind: LambdaCollisionError,
 }
 
 #[derive(Debug, Clone)]
@@ -48,15 +50,15 @@ pub enum ReactionErrorKind {
     ExceedsDepthLimit,
 }
 
-impl From<ReactionError> for PyReactionError {
-    fn from(error: ReactionError) -> Self {
+impl From<LambdaCollisionError> for PyReactionError {
+    fn from(error: LambdaCollisionError) -> Self {
         let kind = match error {
-            ReactionError::ExceedsReductionLimit => ReactionErrorKind::ExceedsReductionLimit,
-            ReactionError::NotEnoughExpressions => ReactionErrorKind::NotEnoughExpressions,
-            ReactionError::IsIdentity => ReactionErrorKind::IsIdentity,
-            ReactionError::IsParent => ReactionErrorKind::IsParent,
-            ReactionError::HasFreeVariables => ReactionErrorKind::HasFreeVariables,
-            ReactionError::ExceedsDepthLimit => ReactionErrorKind::ExceedsDepthLimit,
+            LambdaCollisionError::ExceedsReductionLimit => ReactionErrorKind::ExceedsReductionLimit,
+            LambdaCollisionError::NotEnoughExpressions => ReactionErrorKind::NotEnoughExpressions,
+            LambdaCollisionError::IsIdentity => ReactionErrorKind::IsIdentity,
+            LambdaCollisionError::IsParent => ReactionErrorKind::IsParent,
+            LambdaCollisionError::HasFreeVariables => ReactionErrorKind::HasFreeVariables,
+            LambdaCollisionError::ExceedsDepthLimit => ReactionErrorKind::ExceedsDepthLimit,
         };
         PyReactionError { kind }
     }
@@ -246,29 +248,29 @@ fn encode_hex_py(bytes: Vec<u8>) -> String {
 }
 
 // --- Experiment Functions ---
-#[pyfunction]
-fn run_look_for_add() -> PyResult<()> {
-    async_std::task::block_on(look_for_add());
-    Ok(())
-}
+// #[pyfunction]
+// fn run_look_for_add() -> PyResult<()> {
+//     async_std::task::block_on(look_for_add());
+//     Ok(())
+// }
 
-#[pyfunction]
-fn run_entropy_series() -> PyResult<()> {
-    async_std::task::block_on(entropy_series());
-    Ok(())
-}
+// #[pyfunction]
+// fn run_entropy_series() -> PyResult<()> {
+//     async_std::task::block_on(entropy_series());
+//     Ok(())
+// }
 
-#[pyfunction]
-fn run_entropy_test() -> PyResult<()> {
-    async_std::task::block_on(entropy_test());
-    Ok(())
-}
+// #[pyfunction]
+// fn run_entropy_test() -> PyResult<()> {
+//     async_std::task::block_on(entropy_test());
+//     Ok(())
+// }
 
-#[pyfunction]
-fn run_sync_entropy_test() -> PyResult<()> {
-    sync_entropy_test();
-    Ok(())
-}
+// #[pyfunction]
+// fn run_sync_entropy_test() -> PyResult<()> {
+//     sync_entropy_test();
+//     Ok(())
+// }
 
 // --- Python Module Initialization ---
 #[pymodule]
@@ -284,10 +286,10 @@ fn alchemy(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register functions
     m.add_function(wrap_pyfunction!(decode_hex_py, m)?)?;
     m.add_function(wrap_pyfunction!(encode_hex_py, m)?)?;
-    m.add_function(wrap_pyfunction!(run_look_for_add, m)?)?;
-    m.add_function(wrap_pyfunction!(run_entropy_series, m)?)?;
-    m.add_function(wrap_pyfunction!(run_entropy_test, m)?)?;
-    m.add_function(wrap_pyfunction!(run_sync_entropy_test, m)?)?;
+    // m.add_function(wrap_pyfunction!(run_look_for_add, m)?)?;
+    // m.add_function(wrap_pyfunction!(run_entropy_series, m)?)?;
+    // m.add_function(wrap_pyfunction!(run_entropy_test, m)?)?;
+    // m.add_function(wrap_pyfunction!(run_sync_entropy_test, m)?)?;
 
     Ok(())
 }
