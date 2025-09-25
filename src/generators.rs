@@ -82,6 +82,12 @@ pub struct BTreeGen {
     rng: ChaCha8Rng,
 }
 
+impl Default for BTreeGen {
+    fn default() -> BTreeGen {
+        Self::new()
+    }
+}
+
 impl BTreeGen {
     pub fn new() -> BTreeGen {
         BTreeGen::from_config(&config::BTreeGen::new())
@@ -146,6 +152,7 @@ impl BTreeGen {
     }
 }
 
+#[allow(dead_code)]
 pub struct FontanaGen {
     abs_range: (f64, f64),
     app_range: (f64, f64),
