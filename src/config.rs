@@ -107,13 +107,18 @@ pub struct BTreeGen {
     pub standardization: Standardization,
 }
 
-/// Configuration for Fontana's generator
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FontanaGen {
     /// The seed for the lambda expression generator. If set to `None`, then a seed is chosen
     /// randomly. Default: `None`
     pub seed: ConfigSeed,
+
+    /// Minimum depth before leaf nodes can be generated
+    pub min_depth: u32,
+
+    /// Maximum depth of the generated trees
+    pub max_depth: u32,
 
     /// Probability range of an abstraction being generated. Linearly changes from start to end,
     /// varying with depth
@@ -123,12 +128,27 @@ pub struct FontanaGen {
     /// varying with depth
     pub application_prob_range: (f64, f64),
 
-    /// Maximum depth of the generated trees
-    pub max_depth: u32,
+    /// Probability that a leaf vertex is a free variable
+    pub free_variable_probability: f64,
 
     /// Size of the free variable palette
     pub n_max_free_vars: u32,
 }
+
+impl GenConfig for FontanaGen {
+    fn new() -> Self {
+        FontanaGen {
+            seed: ConfigSeed(None),
+            min_depth: 0,
+            max_depth: 10,
+            n_max_free_vars: 6,
+            application_prob_range: (0.3, 0.5),
+            abstraction_prob_range: (0.5, 0.3),
+            free_variable_probability: 0.0,
+        }
+    }
+}
+
 
 impl Reactor {
     /// Produce a new `ReactorConfig` struct with default values.
@@ -169,17 +189,6 @@ impl GenConfig for BTreeGen {
     }
 }
 
-impl GenConfig for FontanaGen {
-    fn new() -> Self {
-        FontanaGen {
-            max_depth: 10,
-            n_max_free_vars: 6,
-            application_prob_range: (0.3, 0.5),
-            abstraction_prob_range: (0.5, 0.3),
-            seed: ConfigSeed(None),
-        }
-    }
-}
 
 impl Config {
     /// Create a config object from a string

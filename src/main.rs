@@ -124,10 +124,10 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
             gen.generate_n(cfg.sample_size)
         }
         config::Generator::Fontana(gen_cfg) => {
-            let gen = generators::FontanaGen::from_config(gen_cfg);
-            std::iter::from_fn(move || gen.generate())
-                .take(cfg.sample_size)
-                .collect::<Vec<Term>>()
+            let mut gen = generators::FontanaGen::from_config(gen_cfg);
+            gen.generate_n(cfg.sample_size);
+
+            
         }
     };
     let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg.reactor_config);
