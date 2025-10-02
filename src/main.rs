@@ -125,7 +125,7 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
         }
         config::Generator::Fontana(gen_cfg) => {
             let mut gen = generators::FontanaGen::from_config(gen_cfg);
-            gen.generate_n(cfg.sample_size);
+            gen.generate_n(cfg.sample_size)
 
             
         }
