@@ -223,6 +223,10 @@ where
         self.expressions.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.expressions.is_empty()
+    }
+
     /// Get the number of successful collisions
     pub fn collisions(&self) -> usize {
         self.n_collisions
