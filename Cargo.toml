@@ -3,9 +3,11 @@ name = "alchemy"
 version = "0.1.0"
 edition = "2021"
 
+
 [lib]
 name = "alchemy"
-crate-type = ["cdylib"]
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [package.metadata.maturin]
 name = "alchemy"
