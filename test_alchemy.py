@@ -25,7 +25,7 @@ def test_soup():
     soup.perturb(valid_expressions)
     
     print("Soup after perturbation:", soup.expressions())
-    print("Unique expressions:", soup.unique_expressions())
+    # print("Unique expressions:", soup.unique_expressions())
     print("Population entropy:", soup.population_entropy())
 
 

@@ -109,6 +109,53 @@ pub struct PySoup {
 
 #[pymethods]
 impl PySoup {
+    fn k_most_frequent_exprs(&self, k: usize) -> Vec<String> {
+        use std::collections::{HashMap, BinaryHeap};
+        use std::cmp::Reverse;
+        let mut map = HashMap::new();
+        for expr in self.inner.expressions() {
+            *map.entry(expr.to_string()).or_insert(0) += 1;
+        }
+        let mut heap = BinaryHeap::with_capacity(k + 1);
+        for (expr, count) in map.into_iter() {
+            heap.push(Reverse((count, expr)));
+            if heap.len() > k {
+                heap.pop();
+            }
+        }
+        heap.into_sorted_vec()
+            .into_iter()
+            .map(|r| r.0.1)
+            .collect()
+    }
+    fn unique_expressions(&self) -> Vec<String> {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        for expr in self.inner.expressions() {
+            set.insert(expr.to_string());
+        }
+        set.into_iter().collect()
+    }
+
+    fn expression_counts(&self) -> Vec<(String, u32)> {
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        for expr in self.inner.expressions() {
+            *map.entry(expr.to_string()).or_insert(0) += 1;
+        }
+        map.into_iter().collect()
+    }
+
+    fn population_entropy(&self) -> f32 {
+        let counts = self.expression_counts();
+        let n = self.len() as f32;
+        let mut entropy = 0.0;
+        for (_, count) in counts.iter() {
+            let pi = (*count as f32) / n;
+            entropy -= pi * pi.log10();
+        }
+        entropy
+    }
     #[new]
     fn new() -> Self {
         PySoup {
