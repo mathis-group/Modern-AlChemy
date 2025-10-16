@@ -124,7 +124,7 @@ pub fn look_for_xorset() {
             i,
             run_length,
             polling_interval,
-            xorset_test
+            xorset_test,
         )));
     }
 
@@ -153,7 +153,7 @@ pub fn look_for_not_xorset() {
             i,
             run_length,
             polling_interval,
-            not_xorset_test
+            not_xorset_test,
         )));
     }
 

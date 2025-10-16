@@ -166,18 +166,28 @@ pub struct FontanaGen {
 impl FontanaGen {
     pub fn new(
         min_depth: u32,
-        max_depth: u32,
-        abs_prob: (f32, f32),
-        app_prob: (f32, f32),
-        free_prob: f32,
-        max_vars: u32,
+        mut max_depth: u32,
+        mut abs_prob: (f32, f32),
+        mut app_prob: (f32, f32),
+        mut free_prob: f32,
+        mut max_vars: u32,
         seed: [u8; 32],
     ) -> FontanaGen {
-        let abs_incr = (abs_prob.1 - abs_prob.0) / ((max_depth - 1) as f32);
-        let app_incr = (app_prob.1 - app_prob.0) / ((max_depth - 1) as f32);
+        // Sanitise configuration so generation never panics.
+        max_depth = max_depth.max(1);
+        max_vars = max_vars.max(1);
+        free_prob = free_prob.clamp(0.0, 1.0);
+        abs_prob.0 = abs_prob.0.clamp(0.0, 1.0);
+        abs_prob.1 = abs_prob.1.clamp(0.0, 1.0);
+        app_prob.0 = app_prob.0.clamp(0.0, 1.0);
+        app_prob.1 = app_prob.1.clamp(0.0, 1.0);
+
+        let steps = (max_depth - 1).max(1);
+        let abs_incr = (abs_prob.1 - abs_prob.0) / (steps as f32);
+        let app_incr = (app_prob.1 - app_prob.0) / (steps as f32);
 
         FontanaGen {
-            min_depth,
+            min_depth: min_depth.min(max_depth.saturating_sub(1)),
             max_depth,
             abs_prob,
             app_prob,
@@ -192,32 +202,25 @@ impl FontanaGen {
 
     pub fn from_config(cfg: &config::FontanaGen) -> FontanaGen {
         let seed = cfg.seed.get();
-        let rng = ChaCha8Rng::from_seed(seed);
 
-        let abs_incr: f32 = ((cfg.abstraction_prob_range.1 - cfg.abstraction_prob_range.0)
-            / ((cfg.max_depth - 1) as f64)) as f32;
-        let app_incr: f32 = ((cfg.application_prob_range.1 - cfg.application_prob_range.0)
-            / ((cfg.max_depth - 1) as f64)) as f32;
-        
-        FontanaGen {
-            min_depth: 0, 
-            max_depth: cfg.max_depth,
-
-            abs_prob: (cfg.abstraction_prob_range.0 as f32, cfg.abstraction_prob_range.1 as f32),
-            app_prob: (cfg.application_prob_range.0 as f32, cfg.application_prob_range.1 as f32),
-
-            abs_incr,
-            app_incr,
-
-            free_prob: 0.0, 
-            max_vars: cfg.n_max_free_vars,
-            
+        FontanaGen::new(
+            cfg.min_depth,
+            cfg.max_depth,
+            (
+                cfg.abstraction_prob_range.0 as f32,
+                cfg.abstraction_prob_range.1 as f32,
+            ),
+            (
+                cfg.application_prob_range.0 as f32,
+                cfg.application_prob_range.1 as f32,
+            ),
+            cfg.free_variable_probability as f32,
+            cfg.n_max_free_vars,
             seed,
-            rng: ChaCha8Rng::from_seed(seed),
-        }
+        )
     }
 
-    pub fn generate(&mut self) -> Term{
+    pub fn generate(&mut self) -> Term {
         self.rand_lambda(0, self.abs_prob.0, self.app_prob.0)
     }
 
@@ -234,48 +237,56 @@ impl FontanaGen {
     }
 
     pub fn rand_lambda(&mut self, depth: u32, p_abs: f32, p_app: f32) -> Term {
-        if depth >= self.max_depth { // over max depth generating leaf
-            let var = if self.rng.gen_bool(self.free_prob as f64) || depth == 0 {
-                depth + self.rng.gen_range(1..=self.max_vars)
-            } else {
-                self.rng.gen_range(1..=depth)
-            };
-            return Term::Var(var as usize);
-        } else if depth < self.min_depth { // under min length will not generate leaf
-            let coin = self.rng.gen_bool(0.5);
-            if coin {
-                let n_abs = p_abs + self.abs_incr;
-                let n_app = p_app + self.app_incr;
-                return Term::Abs(Box::new(self.rand_lambda(depth + 1, n_abs, n_app)));
-            } else {
-                let n_abs = p_abs + self.abs_incr;
-                let n_app = p_app + self.app_incr;
-                return Term::App(Box::new((
-                    self.rand_lambda(depth+1, n_abs, n_app),
-                    self.rand_lambda(depth+1, n_abs, n_app),
-                )));
-            };
-        } else { 
-            let coin: f32 = self.rng.gen();
-            if coin <= p_abs {
-                let n_abs = p_abs + self.abs_incr;
-                let n_app = p_app + self.app_incr;
-                return Term::Abs(Box::new(self.rand_lambda(depth + 1, n_abs, n_app)));
-            } else if coin <= p_abs + p_app {
-                let n_abs = p_abs + self.abs_incr;
-                let n_app = p_app + self.app_incr;
-                return Term::App(Box::new((
-                    self.rand_lambda(depth+1, n_abs, n_app),
-                    self.rand_lambda(depth+1, n_abs, n_app),
-                )));
-            } else {
-                let var = if self.rng.gen_bool(self.free_prob as f64) || depth == 0 {
-                    depth + self.rng.gen_range(1..=self.max_vars)
-                } else {
-                    self.rng.gen_range(1..=depth)
-                };
-                return Term::Var(var as usize);
-            }
+        let (p_abs_eff, p_app_eff) = Self::clamp_probabilities(p_abs, p_app);
+
+        if depth >= self.max_depth {
+            return self.sample_variable(depth);
         }
+
+        let next_abs = p_abs + self.abs_incr;
+        let next_app = p_app + self.app_incr;
+
+        if depth < self.min_depth {
+            if self.rng.gen_bool(0.5) {
+                return Term::Abs(Box::new(self.rand_lambda(depth + 1, next_abs, next_app)));
+            }
+            return Term::App(Box::new((
+                self.rand_lambda(depth + 1, next_abs, next_app),
+                self.rand_lambda(depth + 1, next_abs, next_app),
+            )));
+        }
+
+        let coin: f32 = self.rng.gen();
+        if coin <= p_abs_eff {
+            return Term::Abs(Box::new(self.rand_lambda(depth + 1, next_abs, next_app)));
+        }
+        if coin <= p_abs_eff + p_app_eff {
+            return Term::App(Box::new((
+                self.rand_lambda(depth + 1, next_abs, next_app),
+                self.rand_lambda(depth + 1, next_abs, next_app),
+            )));
+        }
+
+        self.sample_variable(depth)
+    }
+
+    fn clamp_probabilities(p_abs: f32, p_app: f32) -> (f32, f32) {
+        let abs = p_abs.clamp(0.0, 1.0);
+        let remaining = 1.0 - abs;
+        let app = p_app.clamp(0.0, remaining);
+        (abs, app)
+    }
+
+    fn sample_variable(&mut self, depth: u32) -> Term {
+        let free_choice = self.rng.gen_bool(self.free_prob as f64) || depth == 0;
+        let max_vars = self.max_vars.max(1);
+        let value = if free_choice {
+            let offset = self.rng.gen_range(1..=max_vars);
+            depth.saturating_add(offset) as usize
+        } else {
+            let upper = depth.max(1);
+            self.rng.gen_range(1..=upper) as usize
+        };
+        Term::Var(value)
     }
 }

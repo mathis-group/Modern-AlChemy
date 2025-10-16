@@ -109,6 +109,7 @@ pub struct BTreeGen {
 
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
+/// Generator-specific configuration derived from Walter Fontana's original scheme.
 pub struct FontanaGen {
     /// The seed for the lambda expression generator. If set to `None`, then a seed is chosen
     /// randomly. Default: `None`
@@ -149,7 +150,6 @@ impl GenConfig for FontanaGen {
     }
 }
 
-
 impl Reactor {
     /// Produce a new `ReactorConfig` struct with default values.
     pub fn new() -> Self {
@@ -188,7 +188,6 @@ impl GenConfig for BTreeGen {
         }
     }
 }
-
 
 impl Config {
     /// Create a config object from a string
