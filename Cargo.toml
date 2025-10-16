@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "alchemy"
-crate-type = ["cdylib"]
+crate-type = ["lib", "cdylib"]
 
 [package.metadata.maturin]
 name = "alchemy"
