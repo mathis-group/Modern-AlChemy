@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use serde::{Deserialize, Serialize};
 
-use lambda_calculus::{parse, term::Notation::Classic, Term};
+use lambda_calculus::{parse, term::Notation::Classic};
 
 use crate::config::{self, ConfigSeed, Reactor as RustReactor};
 use crate::generators::{
@@ -157,7 +157,7 @@ impl PyBTreeGen {
             freevar_generation_probability,
             n_max_free_vars: max_free_vars,
             standardization: std.into(),
-            seed: ConfigSeed(Some([0; 32])),
+            seed:ConfigSeed::new([0; 32]),
         };
         PyBTreeGen { inner: RustBTreeGen::from_config(&cfg) }
     }
@@ -174,27 +174,36 @@ pub struct PyFontanaGen { inner: RustFontanaGen }
 
 #[pymethods]
 impl PyFontanaGen {
-    /// Build a Fontana generator from config values
+    /// Build a Fontana generator from config values (matches the new struct)
     #[staticmethod]
     pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),
+        min_depth: u32,
         max_depth: u32,
+        free_variable_probability: f64,
         max_free_vars: u32,
     ) -> Self {
         let cfg = config::FontanaGen {
             abstraction_prob_range: abs_range,
             application_prob_range: app_range,
+            min_depth,
             max_depth,
+            free_variable_probability,
             n_max_free_vars: max_free_vars,
-            seed: ConfigSeed(Some([0; 32])),
+            seed: ConfigSeed::new([0; 32]),
         };
         PyFontanaGen { inner: RustFontanaGen::from_config(&cfg) }
     }
 
-    /// Generate one lambda term; returns `None` when the generator yields nothing
-    pub fn generate(&self) -> Option<String> {
-        self.inner.generate().map(|t| t.to_string())
+    /// Generate a single lambda term (now always returns a term)
+    pub fn generate(&mut self) -> String {
+        self.inner.generate().to_string()
+    }
+
+    /// Convenience: generate N terms
+    pub fn generate_n(&mut self, n: usize) -> Vec<String> {
+        self.inner.generate_n(n).into_iter().map(|t| t.to_string()).collect()
     }
 }
 

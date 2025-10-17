@@ -4,15 +4,23 @@
 import sys
 import traceback
 
+
+def die(msg: str):
+    print(msg)
+    sys.exit(1)
+
+
 def main():
+    # ---------- Import ----------
     try:
         import alchemy
-    except Exception as e:
-        print("❌ Failed to import 'alchemy' Python module.")
-        traceback.print_exc()
-        sys.exit(1)
-
-    print("✅ Imported alchemy")
+        import inspect
+        print("✅ Imported alchemy")
+        print("   module:", getattr(alchemy, "__file__", "<unknown>"))
+        print("   PyFontanaGen.from_config signature:",
+              inspect.signature(alchemy.PyFontanaGen.from_config))
+    except Exception:
+        die("❌ Failed to import 'alchemy'\n" + traceback.format_exc())
 
     # ---------- Utilities ----------
     try:
@@ -21,63 +29,53 @@ def main():
         assert bytes(hx) == raw, f"decode_hex_py mismatch: {hx}"
         re_hx = alchemy.encode_hex_py(list(raw))
         assert re_hx.lower() == "0001abcd", f"encode_hex_py mismatch: {re_hx}"
-        print("✅ Utilities: decode_hex_py / encode_hex_py")
+        print("✅ Utilities OK (decode_hex_py / encode_hex_py)")
     except Exception:
-        print("❌ Utilities failed")
-        traceback.print_exc()
-        sys.exit(1)
+        die("❌ Utilities failed\n" + traceback.format_exc())
 
     # ---------- Standardization ----------
     try:
         std_prefix = alchemy.PyStandardization("prefix")
         std_postfix = alchemy.PyStandardization("postfix")
         std_none    = alchemy.PyStandardization("none")
+        for s in (std_prefix, std_postfix, std_none):
+            assert s is not None
         print("✅ PyStandardization constructed (prefix/postfix/none)")
     except Exception:
-        print("❌ PyStandardization construction failed")
-        traceback.print_exc()
-        sys.exit(1)
+        die("❌ PyStandardization construction failed\n" + traceback.format_exc())
 
     # ---------- Generators: BTreeGen ----------
     try:
-        # BTreeGen::from_config(size, freevar_prob, max_free_vars, std)
         bt = alchemy.PyBTreeGen.from_config(
             size=6,
             freevar_generation_probability=0.3,
             max_free_vars=3,
-            std=std_prefix
+            std=std_prefix,
         )
         one = bt.generate()
         many = bt.generate_n(5)
-        assert isinstance(one, str) and len(one) > 0, "BTreeGen.generate must return string term"
-        assert isinstance(many, list) and len(many) == 5 and all(isinstance(x, str) for x in many)
+        assert isinstance(one, str) and len(one) > 0, "BTreeGen.generate must return a non-empty string"
+        assert isinstance(many, list) and len(many) == 5 and all(isinstance(x, str) and x for x in many)
         print("✅ PyBTreeGen.generate / generate_n OK")
     except Exception:
-        print("❌ PyBTreeGen tests failed")
-        traceback.print_exc()
-        sys.exit(1)
+        die("❌ PyBTreeGen tests failed\n" + traceback.format_exc())
 
-    # ---------- Soup: basic lifecycle ----------
+    # ---------- Soup lifecycle ----------
     try:
-        # Path 1: default config
         soup1 = alchemy.PySoup()
         assert soup1.len() == 0, "New soup should be empty"
 
-        # Path 2: from reactor config
         reactor = alchemy.PyReactor()
         soup2 = alchemy.PySoup.from_config(reactor)
         assert soup2.len() == 0, "Soup.from_config should start empty"
 
-        # Seed soup2 with 10 generated expressions from BTreeGen
         exprs = bt.generate_n(10)
         soup2.perturb(exprs)
         assert soup2.len() == 10, f"After perturb, expected 10 expressions, got {soup2.len()}"
 
-        # Simulate a few steps, ensure the API responds
         steps = soup2.simulate_for(25, False)
-        assert isinstance(steps, int), "simulate_for should return usize (int in Python)"
+        assert isinstance(steps, int)
 
-        # Read back data
         all_exprs = soup2.expressions()
         uniq = soup2.unique_expressions()
         counts = soup2.expression_counts()
@@ -96,28 +94,28 @@ def main():
         assert isinstance(ln, int)
         print(f"✅ PySoup lifecycle OK | len={ln}, uniq={len(uniq)}, collisions={col}, entropy={ent:.4f}")
     except Exception:
-        print("❌ PySoup tests failed")
-        traceback.print_exc()
-        sys.exit(1)
+        die("❌ PySoup tests failed\n" + traceback.format_exc())
 
-    # ---------- FontanaGen (may legitimately return None) ----------
+    # ---------- FontanaGen (new API + always returns str) ----------
     try:
         fg = alchemy.PyFontanaGen.from_config(
             abs_range=(0.2, 0.6),
             app_range=(0.2, 0.6),
-            max_depth=5,
-            max_free_vars=3
+            min_depth=1,              # test minimum nesting before allowing variables
+            max_depth=5,              # cap depth growth
+            free_variable_probability=0.25,
+            max_free_vars=3,
         )
-        maybe = fg.generate()
-        # Current Rust stub returns None; accept either None or str
-        assert (maybe is None) or isinstance(maybe, str)
-        print(f"✅ PyFontanaGen.generate OK (returned {type(maybe).__name__})")
+        term = fg.generate()
+        assert isinstance(term, str) and term, "FontanaGen.generate must return a non-empty string"
+        terms = fg.generate_n(5)
+        assert isinstance(terms, list) and len(terms) == 5 and all(isinstance(t, str) and t for t in terms)
+        print("✅ PyFontanaGen.from_config / generate / generate_n OK")
     except Exception:
-        print("❌ PyFontanaGen tests failed")
-        traceback.print_exc()
-        sys.exit(1)
+        die("❌ PyFontanaGen tests failed\n" + traceback.format_exc())
 
     print("\n🎉 All python.rs bindings exercised successfully.")
+
 
 if __name__ == "__main__":
     main()
