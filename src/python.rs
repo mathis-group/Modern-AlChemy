@@ -174,8 +174,9 @@ pub struct PyFontanaGen { inner: RustFontanaGen }
 
 #[pymethods]
 impl PyFontanaGen {
+    /// Build a Fontana generator from config values
     #[staticmethod]
-    fn from_config(
+    pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),
         max_depth: u32,
@@ -191,7 +192,10 @@ impl PyFontanaGen {
         PyFontanaGen { inner: RustFontanaGen::from_config(&cfg) }
     }
 
-    fn generate(&self) -> Option<String> { self.inner.generate().map(|t| t.to_string()) }
+    /// Generate one lambda term; returns `None` when the generator yields nothing
+    pub fn generate(&self) -> Option<String> {
+        self.inner.generate().map(|t| t.to_string())
+    }
 }
 
 // ============ Utilities ============

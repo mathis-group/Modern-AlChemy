@@ -30,3 +30,4 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
 fn alchemy(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::register(m)
 }
+
