@@ -17,4 +17,3 @@ mod python;
 fn alchemy(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::register(m)
 }
-

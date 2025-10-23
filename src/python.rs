@@ -66,7 +66,9 @@ pub struct PyReactor {
 impl PyReactor {
     #[new]
     fn new() -> Self {
-        PyReactor { inner: RustReactor::new() }
+        PyReactor {
+            inner: RustReactor::new(),
+        }
     }
 }
 
@@ -86,14 +88,20 @@ impl PyStandardization {
             "prefix" => RustStandardization::Prefix,
             "postfix" => RustStandardization::Postfix,
             "none" => RustStandardization::None,
-            _ => return Err(pyo3::exceptions::PyValueError::new_err("Invalid standardization type")),
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "Invalid standardization type",
+                ))
+            }
         };
         Ok(PyStandardization { standardization })
     }
 }
 
 impl From<PyStandardization> for RustStandardization {
-    fn from(py_std: PyStandardization) -> Self { py_std.standardization }
+    fn from(py_std: PyStandardization) -> Self {
+        py_std.standardization
+    }
 }
 
 // ============ Soup wrapper ============
@@ -106,44 +114,77 @@ pub struct PySoup {
 #[pymethods]
 impl PySoup {
     #[new]
-    fn new() -> Self { PySoup { inner: RustSoup::new() } }
+    fn new() -> Self {
+        PySoup {
+            inner: RustSoup::new(),
+        }
+    }
 
     #[staticmethod]
     fn from_config(cfg: &PyReactor) -> Self {
-        PySoup { inner: RustSoup::from_config(&cfg.inner) }
+        PySoup {
+            inner: RustSoup::from_config(&cfg.inner),
+        }
     }
 
     fn perturb(&mut self, expressions: Vec<String>) -> PyResult<()> {
-        let terms = expressions.into_iter().filter_map(|s| parse(&s, Classic).ok());
+        let terms = expressions
+            .into_iter()
+            .filter_map(|s| parse(&s, Classic).ok());
         self.inner.add_lambda_expressions(terms);
         Ok(())
     }
 
-    fn simulate_for(&mut self, n: usize, log: bool) -> usize { self.inner.simulate_for(n, log) }
-    fn len(&self) -> usize { self.inner.len() }
-    fn collisions(&self) -> usize { self.inner.collisions() }
+    fn simulate_for(&mut self, n: usize, log: bool) -> usize {
+        self.inner.simulate_for(n, log)
+    }
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+    fn collisions(&self) -> usize {
+        self.inner.collisions()
+    }
 
     fn expressions(&self) -> Vec<String> {
-        self.inner.lambda_expressions().map(|t| t.to_string()).collect()
+        self.inner
+            .lambda_expressions()
+            .map(|t| t.to_string())
+            .collect()
     }
     fn unique_expressions(&self) -> Vec<String> {
-        self.inner.unique_expressions().into_iter().map(|t| t.to_string()).collect()
+        self.inner
+            .unique_expressions()
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect()
     }
     fn expression_counts(&self) -> Vec<(String, u32)> {
-        self.inner.expression_counts().into_iter().map(|(t, c)| (t.to_string(), c)).collect()
+        self.inner
+            .expression_counts()
+            .into_iter()
+            .map(|(t, c)| (t.to_string(), c))
+            .collect()
     }
-    fn population_entropy(&self) -> f32 { self.inner.population_entropy() }
+    fn population_entropy(&self) -> f32 {
+        self.inner.population_entropy()
+    }
 }
 
 // ============ Generators ============
 
 #[pyclass]
-pub struct PyBTreeGen { inner: RustBTreeGen }
+pub struct PyBTreeGen {
+    inner: RustBTreeGen,
+}
 
 #[pymethods]
 impl PyBTreeGen {
     #[new]
-    fn new() -> Self { PyBTreeGen { inner: RustBTreeGen::new() } }
+    fn new() -> Self {
+        PyBTreeGen {
+            inner: RustBTreeGen::new(),
+        }
+    }
 
     #[staticmethod]
     fn from_config(
@@ -157,20 +198,30 @@ impl PyBTreeGen {
             freevar_generation_probability,
             n_max_free_vars: max_free_vars,
             standardization: std.into(),
-            seed:ConfigSeed::new([0; 32]),
+            seed: ConfigSeed::new([0; 32]),
         };
-        PyBTreeGen { inner: RustBTreeGen::from_config(&cfg) }
+        PyBTreeGen {
+            inner: RustBTreeGen::from_config(&cfg),
+        }
     }
 
-    fn generate(&mut self) -> String { self.inner.generate().to_string() }
+    fn generate(&mut self) -> String {
+        self.inner.generate().to_string()
+    }
 
     fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner.generate_n(n).into_iter().map(|t| t.to_string()).collect()
+        self.inner
+            .generate_n(n)
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect()
     }
 }
 
 #[pyclass]
-pub struct PyFontanaGen { inner: RustFontanaGen }
+pub struct PyFontanaGen {
+    inner: RustFontanaGen,
+}
 
 #[pymethods]
 impl PyFontanaGen {
@@ -193,7 +244,9 @@ impl PyFontanaGen {
             n_max_free_vars: max_free_vars,
             seed: ConfigSeed::new([0; 32]),
         };
-        PyFontanaGen { inner: RustFontanaGen::from_config(&cfg) }
+        PyFontanaGen {
+            inner: RustFontanaGen::from_config(&cfg),
+        }
     }
 
     /// Generate a single lambda term (now always returns a term)
@@ -203,7 +256,11 @@ impl PyFontanaGen {
 
     /// Convenience: generate N terms
     pub fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner.generate_n(n).into_iter().map(|t| t.to_string()).collect()
+        self.inner
+            .generate_n(n)
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect()
     }
 }
 
@@ -215,7 +272,9 @@ fn decode_hex_py(hex_string: &str) -> PyResult<Vec<u8>> {
 }
 
 #[pyfunction]
-fn encode_hex_py(bytes: Vec<u8>) -> String { encode_hex(&bytes) }
+fn encode_hex_py(bytes: Vec<u8>) -> String {
+    encode_hex(&bytes)
+}
 
 // ============ Public registration hook ============
 
