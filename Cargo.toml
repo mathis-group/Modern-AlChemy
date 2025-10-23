@@ -7,7 +7,7 @@ edition = "2021"
 [lib]
 name = "alchemy"
 path = "src/lib.rs"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [package.metadata.maturin]
 name = "alchemy"
