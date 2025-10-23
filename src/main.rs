@@ -116,6 +116,7 @@ fn get_config(cli: &Cli) -> std::io::Result<config::Config> {
     Ok(config)
 }
 
+// main.rs
 pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recursive::LambdaSoup {
     let expressions = match &cfg.generator_config {
         config::Generator::BTree(gen_cfg) => {
@@ -124,7 +125,7 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
         }
         config::Generator::Fontana(gen_cfg) => {
             let mut gen = generators::FontanaGen::from_config(gen_cfg);
-            gen.generate_n(cfg.sample_size)
+            gen.generate_n(cfg.sample_size) // ← returns Vec<Term>
         }
     };
     let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg.reactor_config);

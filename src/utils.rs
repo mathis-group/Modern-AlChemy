@@ -97,7 +97,7 @@ where
     U: Ord,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.priority.cmp(&other.priority))
+        Some(self.cmp(other))
     }
 }
 
@@ -144,6 +144,6 @@ where
     for i in series {
         write!(file, "{:?}; ", i)?;
     }
-    write!(file, "\n")?;
+    writeln!(file)?;
     Ok(())
 }

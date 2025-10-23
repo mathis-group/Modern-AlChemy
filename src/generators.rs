@@ -221,6 +221,7 @@ impl FontanaGen {
     }
 
     pub fn generate(&mut self) -> Term {
+        // <-- not Option<Term>
         self.rand_lambda(0, self.abs_prob.0, self.app_prob.0)
     }
 
