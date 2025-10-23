@@ -4,7 +4,6 @@ use experiments::{
     discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
 };
 use generators::BTreeGen;
-use lambda_calculus::Term;
 use std::fs::{read_to_string, File};
 use std::io::Write;
 
@@ -152,9 +151,19 @@ fn main() -> std::io::Result<()> {
     }
 
     if let Some(n) = cli.generate {
-        let mut gen = BTreeGen::new();
-        for _ in 0..n {
-            println!("{:?}", gen.generate())
+        match &config.generator_config {
+            config::Generator::BTree(gen_cfg) => {
+                let mut gen = BTreeGen::from_config(gen_cfg);
+                for _ in 0..n {
+                    println!("{:?}", gen.generate())
+                }
+            }
+            config::Generator::Fontana(gen_cfg) => {
+                let mut gen = generators::FontanaGen::from_config(gen_cfg);
+                for _ in 0..n {
+                    println!("{:?}", gen.generate())
+                }
+            }
         }
         return Ok(());
     }
