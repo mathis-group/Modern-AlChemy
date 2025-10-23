@@ -134,7 +134,6 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
     soup
 }
 
-
 fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
 
