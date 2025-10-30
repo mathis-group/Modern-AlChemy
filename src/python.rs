@@ -27,7 +27,7 @@ pub struct PyReactionError {
     kind: ReactionErrorKind,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ReactionErrorKind {
     ExceedsReductionLimit,
     NotEnoughExpressions,
@@ -37,6 +37,29 @@ pub enum ReactionErrorKind {
     ExceedsDepthLimit,
     RecursiveArgument,
     BadArgument,
+}
+
+impl ReactionErrorKind {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ReactionErrorKind::ExceedsReductionLimit => "exceeds_reduction_limit",
+            ReactionErrorKind::NotEnoughExpressions => "not_enough_expressions",
+            ReactionErrorKind::IsIdentity => "is_identity",
+            ReactionErrorKind::IsParent => "is_parent",
+            ReactionErrorKind::HasFreeVariables => "has_free_variables",
+            ReactionErrorKind::ExceedsDepthLimit => "exceeds_depth_limit",
+            ReactionErrorKind::RecursiveArgument => "recursive_argument",
+            ReactionErrorKind::BadArgument => "bad_argument",
+        }
+    }
+}
+
+#[pymethods]
+impl PyReactionError {
+    #[getter]
+    fn kind(&self) -> &'static str {
+        self.kind.as_str()
+    }
 }
 
 impl From<LambdaCollisionError> for PyReactionError {
