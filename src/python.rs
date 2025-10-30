@@ -150,12 +150,11 @@ impl PySoup {
         }
     }
 
-    fn perturb(&mut self, expressions: Vec<String>) -> PyResult<()> {
+    fn perturb(&mut self, expressions: Vec<String>) {
         let terms = expressions
             .into_iter()
             .filter_map(|s| parse(&s, Classic).ok());
         self.inner.add_lambda_expressions(terms);
-        Ok(())
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
@@ -289,6 +288,7 @@ impl PyFontanaGen {
 
 // ============ Utilities ============
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn decode_hex_py(hex_string: &str) -> PyResult<Vec<u8>> {
     decode_hex(hex_string).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
