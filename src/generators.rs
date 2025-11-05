@@ -82,6 +82,12 @@ pub struct BTreeGen {
     rng: ChaCha8Rng,
 }
 
+impl Default for BTreeGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BTreeGen {
     pub fn new() -> BTreeGen {
         BTreeGen::from_config(&config::BTreeGen::new())
