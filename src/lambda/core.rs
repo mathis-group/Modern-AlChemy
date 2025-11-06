@@ -247,6 +247,12 @@ impl fmt::Display for LambdaParticle {
     }
 }
 
+impl Default for LambdaSoup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LambdaSoup {
     /// Generate an empty soup with the following configuration options:
     pub fn new() -> Self {
