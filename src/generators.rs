@@ -167,6 +167,8 @@ pub struct FontanaGen {
 
     seed: [u8; 32],
     rng: ChaCha8Rng,
+
+    std: Standardization,
 }
 
 impl FontanaGen {
@@ -203,6 +205,7 @@ impl FontanaGen {
             max_vars,
             seed,
             rng: ChaCha8Rng::from_seed(seed),
+            std: Standardization::Prefix,
         }
     }
 
@@ -228,7 +231,13 @@ impl FontanaGen {
 
     pub fn generate(&mut self) -> Term {
         // <-- not Option<Term>
-        self.rand_lambda(0, self.abs_prob.0, self.app_prob.0)
+        let lambda = self.rand_lambda(0, self.abs_prob.0, self.app_prob.0);
+
+        match self.std {
+            Standardization::Prefix => Self::prefix_standardize(lambda),
+            Standardization::Postfix => Self::postfix_standardize(lambda),
+            Standardization::None => lambda,
+        }
     }
 
     pub fn generate_n(&mut self, n: usize) -> Vec<Term> {
@@ -295,5 +304,16 @@ impl FontanaGen {
             self.rng.gen_range(1..=upper) as usize
         };
         Term::Var(value)
+    }
+
+    fn prefix_standardize(mut t: Term) -> Term {
+    while t.has_free_variables() {
+        t = Term::Abs(Box::new(t))
+    }
+    t
+}
+
+    fn postfix_standardize(_t: Term) -> Term {
+        unimplemented!("Postfix standardization is unimplemented!!!!")
     }
 }
