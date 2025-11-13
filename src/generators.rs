@@ -152,8 +152,6 @@ impl BTreeGen {
     }
 }
 
-
-
 pub struct FontanaGen {
     min_depth: u32,
     max_depth: u32,
@@ -309,11 +307,11 @@ impl FontanaGen {
     }
 
     fn prefix_standardize(mut t: Term) -> Term {
-    while t.has_free_variables() {
-        t = Term::Abs(Box::new(t))
+        while t.has_free_variables() {
+            t = Term::Abs(Box::new(t))
+        }
+        t
     }
-    t
-}
 
     fn postfix_standardize(_t: Term) -> Term {
         unimplemented!("Postfix standardization is unimplemented!!!!")
