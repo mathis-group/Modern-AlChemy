@@ -28,7 +28,7 @@ pub struct PyReactionError {
     kind: ReactionErrorKind,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ReactionErrorKind {
     ExceedsReductionLimit,
     NotEnoughExpressions,
@@ -38,6 +38,29 @@ pub enum ReactionErrorKind {
     ExceedsDepthLimit,
     RecursiveArgument,
     BadArgument,
+}
+
+impl ReactionErrorKind {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ReactionErrorKind::ExceedsReductionLimit => "exceeds_reduction_limit",
+            ReactionErrorKind::NotEnoughExpressions => "not_enough_expressions",
+            ReactionErrorKind::IsIdentity => "is_identity",
+            ReactionErrorKind::IsParent => "is_parent",
+            ReactionErrorKind::HasFreeVariables => "has_free_variables",
+            ReactionErrorKind::ExceedsDepthLimit => "exceeds_depth_limit",
+            ReactionErrorKind::RecursiveArgument => "recursive_argument",
+            ReactionErrorKind::BadArgument => "bad_argument",
+        }
+    }
+}
+
+#[pymethods]
+impl PyReactionError {
+    #[getter]
+    fn kind(&self) -> &'static str {
+        self.kind.as_str()
+    }
 }
 
 impl From<LambdaCollisionError> for PyReactionError {
@@ -128,12 +151,11 @@ impl PySoup {
         }
     }
 
-    fn perturb(&mut self, expressions: Vec<String>) -> PyResult<()> {
+    fn perturb(&mut self, expressions: Vec<String>) {
         let terms = expressions
             .into_iter()
             .filter_map(|s| parse(&s, Classic).ok());
         self.inner.add_lambda_expressions(terms);
-        Ok(())
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
@@ -267,6 +289,7 @@ impl PyFontanaGen {
 
 // ============ Utilities ============
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn decode_hex_py(hex_string: &str) -> PyResult<Vec<u8>> {
     decode_hex(hex_string).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))

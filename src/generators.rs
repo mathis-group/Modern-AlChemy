@@ -152,6 +152,12 @@ impl BTreeGen {
     }
 }
 
+impl Default for BTreeGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct FontanaGen {
     min_depth: u32,
     max_depth: u32,

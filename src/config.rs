@@ -229,6 +229,12 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Represents a seed for serde RNGs in the configuration file. Mostly here because we want
 /// to ser/de to/from a hex string.
 #[warn(missing_docs)]
