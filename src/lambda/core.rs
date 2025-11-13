@@ -157,7 +157,7 @@ impl AlchemyCollider {
 
             let expr = LambdaParticle { expr };
 
-            collision_results.push((expr, size, n))
+            collision_results.push((expr, n, size))
         }
         Ok(LambdaCollisionOk {
             results: collision_results.iter().map(|t| t.0.clone()).collect(),
