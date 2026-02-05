@@ -2,6 +2,7 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use serde::{Deserialize, Serialize};
+use rand::Rng; // Import Rng for random seed generation
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
@@ -18,6 +19,26 @@ use crate::utils::{decode_hex, encode_hex};
 // Concrete soup alias for the recursive lambda flavor
 type RustSoup =
     GenericSoup<LambdaParticle, AlchemyCollider, LambdaCollisionOk, LambdaCollisionError>;
+
+// ============ Helper for Seed Parsing ============
+
+fn parse_seed(seed_hex: Option<String>) -> PyResult<[u8; 32]> {
+    match seed_hex {
+        Some(s) => {
+            let bytes = decode_hex(&s).map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(format!("Invalid hex seed: {}", e))
+            })?;
+            bytes.try_into().map_err(|_| {
+                pyo3::exceptions::PyValueError::new_err("Seed must be exactly 32 bytes (64 hex chars)")
+            })
+        }
+        None => {
+            // Generate random seed if not provided
+            let mut rng = rand::thread_rng();
+            Ok(rng.gen())
+        }
+    }
+}
 
 // ============ Errors exposed to Python ============
 
@@ -215,17 +236,20 @@ impl PyBTreeGen {
         freevar_generation_probability: f64,
         max_free_vars: u32,
         std: PyStandardization,
-    ) -> Self {
+        seed: Option<String>,
+    ) -> PyResult<Self> {
+        let seed_bytes = parse_seed(seed)?;
+        
         let cfg = config::BTreeGen {
             size,
             freevar_generation_probability,
             n_max_free_vars: max_free_vars,
             standardization: std.into(),
-            seed: ConfigSeed::new([0; 32]),
+            seed: ConfigSeed::new(seed_bytes),
         };
-        PyBTreeGen {
+        Ok(PyBTreeGen {
             inner: RustBTreeGen::from_config(&cfg),
-        }
+        })
     }
 
     fn generate(&mut self) -> String {
@@ -248,7 +272,7 @@ pub struct PyFontanaGen {
 
 #[pymethods]
 impl PyFontanaGen {
-    /// Build a Fontana generator from config values (matches the new struct)
+    /// Build a Fontana generator from config values
     #[staticmethod]
     pub fn from_config(
         abs_range: (f64, f64),
@@ -257,7 +281,10 @@ impl PyFontanaGen {
         max_depth: u32,
         free_variable_probability: f64,
         max_free_vars: u32,
-    ) -> Self {
+        seed: Option<String>,
+    ) -> PyResult<Self> {
+        let seed_bytes = parse_seed(seed)?;
+
         let cfg = config::FontanaGen {
             abstraction_prob_range: abs_range,
             application_prob_range: app_range,
@@ -265,14 +292,14 @@ impl PyFontanaGen {
             max_depth,
             free_variable_probability,
             n_max_free_vars: max_free_vars,
-            seed: ConfigSeed::new([0; 32]),
+            seed: ConfigSeed::new(seed_bytes),
         };
-        PyFontanaGen {
+        Ok(PyFontanaGen {
             inner: RustFontanaGen::from_config(&cfg),
-        }
+        })
     }
 
-    /// Generate a single lambda term (now always returns a term)
+    /// Generate a single lambda term
     pub fn generate(&mut self) -> String {
         self.inner.generate().to_string()
     }

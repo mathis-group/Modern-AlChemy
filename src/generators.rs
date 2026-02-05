@@ -137,8 +137,18 @@ impl BTreeGen {
         self.seed
     }
 
-    fn postfix_standardize(_t: Term) -> Term {
-        unimplemented!("Postfix standiardization is unimplimented!!!!");
+    fn postfix_standardize(mut t: Term) -> Term {
+        let mut depth = 0;
+        while t.has_free_variables() {
+            t = Abs(Box::new(t));
+            depth += 1;
+        }
+        for _ in 0..depth {
+            // Identity function: \x. 1 (in De Bruijn, \x. x is Abs(Var(1)))
+            let identity = Abs(Box::new(Term::Var(1)));
+            t = Term::App(Box::new((t, identity)));
+        }
+        t
     }
 
     /// Add abstractions until the expression has no free variables
@@ -313,7 +323,19 @@ impl FontanaGen {
         t
     }
 
-    fn postfix_standardize(_t: Term) -> Term {
-        unimplemented!("Postfix standardization is unimplemented!!!!")
+    fn postfix_standardize(mut t: Term) -> Term {
+        let mut depth = 0;
+        while t.has_free_variables() {
+            t = Term::Abs(Box::new(t));
+            depth += 1;
+        }
+
+        for _ in 0..depth {
+            // Supply Identity (\x.x) for each bound variable
+            let identity = Term::Abs(Box::new(Term::Var(1)));
+            t = Term::App(Box::new((t, identity)));
+        }
+
+        t
     }
 }
