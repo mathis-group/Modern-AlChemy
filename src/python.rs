@@ -231,6 +231,7 @@ impl PyBTreeGen {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (size, freevar_generation_probability, max_free_vars, std, seed=None))]
     fn from_config(
         size: u32,
         freevar_generation_probability: f64,
@@ -274,6 +275,7 @@ pub struct PyFontanaGen {
 impl PyFontanaGen {
     /// Build a Fontana generator from config values
     #[staticmethod]
+    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, free_variable_probability, max_free_vars, seed=None))]
     pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),

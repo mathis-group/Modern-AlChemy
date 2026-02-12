@@ -262,6 +262,8 @@ impl FontanaGen {
         self.seed
     }
 
+    // if depth of tree is not reached with a 50% probability either an abs or app is generated.
+    // at each level an incremented prob for abs and app exist.
     pub fn rand_lambda(&mut self, depth: u32, p_abs: f32, p_app: f32) -> Term {
         let (p_abs_eff, p_app_eff) = Self::clamp_probabilities(p_abs, p_app);
 
@@ -303,6 +305,7 @@ impl FontanaGen {
         (abs, app)
     }
 
+    // uses De Bruijn indices
     fn sample_variable(&mut self, depth: u32) -> Term {
         let free_choice = self.rng.gen_bool(self.free_prob as f64) || depth == 0;
         let max_vars = self.max_vars.max(1);
@@ -310,8 +313,7 @@ impl FontanaGen {
             let offset = self.rng.gen_range(1..=max_vars);
             depth.saturating_add(offset) as usize
         } else {
-            let upper = depth.max(1);
-            self.rng.gen_range(1..=upper) as usize
+            self.rng.gen_range(1..=depth) as usize
         };
         Term::Var(value)
     }
