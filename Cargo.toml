@@ -9,6 +9,10 @@ name = "alchemy"
 path = "src/lib.rs"
 crate-type = ["rlib","cdylib"]
 
+[[bin]]
+name = "alchemy-cli" # Rename the executable target here
+path = "src/main.rs"
+
 [package.metadata.maturin]
 name = "alchemy"
 python-source = "python"
