@@ -1,4 +1,4 @@
-pub mod core;
+// pub mod core; // superseded by recursive.rs — no callers remain
 
 pub mod recursive;
 
