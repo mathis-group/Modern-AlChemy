@@ -80,6 +80,7 @@ where
         let result = self.collider.collide(left.clone(), right.clone());
 
         if let Ok(ref t) = result {
+            self.n_collisions += 1;
             self.perturb(t.particles());
 
             // Remove additional expressions, if required.
