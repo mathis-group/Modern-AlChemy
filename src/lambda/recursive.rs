@@ -22,7 +22,6 @@ pub struct LambdaParticle {
 pub struct AlchemyCollider {
     rlimit: usize,
     slimit: usize,
-    disallow_recursive: bool,
     reaction_rules: Vec<Term>,
     discard_copy_actions: bool,
     discard_identity: bool,
@@ -134,7 +133,6 @@ impl AlchemyCollider {
         Self {
             rlimit: cfg.reduction_cutoff,
             slimit: cfg.size_cutoff,
-            disallow_recursive: false,
             reaction_rules: cfg
                 .rules
                 .iter()
