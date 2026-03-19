@@ -109,11 +109,55 @@ pub struct PyReactor {
 
 #[pymethods]
 impl PyReactor {
+    /// Create a reactor.
+    ///
+    /// All arguments are keyword-only and optional. Defaults match `Reactor::new()`:
+    ///   - rules                            = ["\\x.\\y.x y"]
+    ///   - discard_copy_actions             = True
+    ///   - discard_identity                 = True
+    ///   - discard_free_variable_expressions= True
+    ///   - maintain_constant_population_size= True
+    ///   - discard_parents                  = False
+    ///   - reduction_cutoff                 = 500
+    ///   - size_cutoff                      = 500
+    ///   - seed                             = None  (random)
     #[new]
-    fn new() -> Self {
-        PyReactor {
-            inner: RustReactor::new(),
-        }
+    #[pyo3(signature = (
+        rules=None,
+        discard_copy_actions=true,
+        discard_identity=true,
+        discard_free_variable_expressions=true,
+        maintain_constant_population_size=true,
+        discard_parents=false,
+        reduction_cutoff=500,
+        size_cutoff=500,
+        seed=None,
+    ))]
+    fn new(
+        rules: Option<Vec<String>>,
+        discard_copy_actions: bool,
+        discard_identity: bool,
+        discard_free_variable_expressions: bool,
+        maintain_constant_population_size: bool,
+        discard_parents: bool,
+        reduction_cutoff: usize,
+        size_cutoff: usize,
+        seed: Option<String>,
+    ) -> PyResult<Self> {
+        let seed_bytes = parse_seed(seed)?;
+        Ok(PyReactor {
+            inner: RustReactor {
+                rules: rules.unwrap_or_else(|| vec![String::from("\\x.\\y.x y")]),
+                discard_copy_actions,
+                discard_identity,
+                discard_free_variable_expressions,
+                maintain_constant_population_size,
+                discard_parents,
+                reduction_cutoff,
+                size_cutoff,
+                seed: ConfigSeed::new(seed_bytes),
+            },
+        })
     }
 }
 
