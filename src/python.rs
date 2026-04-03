@@ -1,8 +1,8 @@
 // src/python.rs
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
-use rand::Rng; // Import Rng for random seed generation
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
@@ -29,11 +29,12 @@ fn parse_seed(seed_hex: Option<String>) -> PyResult<[u8; 32]> {
                 pyo3::exceptions::PyValueError::new_err(format!("Invalid hex seed: {}", e))
             })?;
             bytes.try_into().map_err(|_| {
-                pyo3::exceptions::PyValueError::new_err("Seed must be exactly 32 bytes (64 hex chars)")
+                pyo3::exceptions::PyValueError::new_err(
+                    "Seed must be exactly 32 bytes (64 hex chars)",
+                )
             })
         }
         None => {
-            // Generate random seed if not provided
             let mut rng = rand::thread_rng();
             Ok(rng.gen())
         }
@@ -97,6 +98,44 @@ impl From<LambdaCollisionError> for PyReactionError {
             LambdaCollisionError::BadArgument => ReactionErrorKind::BadArgument,
         };
         PyReactionError { kind }
+    }
+}
+
+// ============ Reaction Record exposed to Python ============
+
+#[pyclass]
+#[derive(Clone)]
+pub struct PyReactionRecord {
+    #[pyo3(get)]
+    pub step: usize,
+    #[pyo3(get)]
+    pub left: String,
+    #[pyo3(get)]
+    pub right: String,
+    #[pyo3(get)]
+    pub products: Vec<String>,
+    #[pyo3(get)]
+    pub success: bool,
+    #[pyo3(get)]
+    pub error: Option<String>,
+}
+
+#[pymethods]
+impl PyReactionRecord {
+    fn __repr__(&self) -> String {
+        if self.success {
+            format!(
+                "ReactionRecord(step={}, left=..., right=..., products=[{}])",
+                self.step,
+                self.products.len()
+            )
+        } else {
+            format!(
+                "ReactionRecord(step={}, FAILED: {})",
+                self.step,
+                self.error.as_deref().unwrap_or("unknown")
+            )
+        }
     }
 }
 
@@ -182,6 +221,41 @@ impl PySoup {
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
         self.inner.simulate_for(n, log)
     }
+
+    /// Simulate for `n` collisions and return a list of ReactionRecord
+    /// objects capturing every reaction (parents + products).
+    fn simulate_for_logged(&mut self, n: usize) -> Vec<PyReactionRecord> {
+        self.inner
+            .simulate_for_logged(n)
+            .into_iter()
+            .map(|r| PyReactionRecord {
+                step: r.step,
+                left: r.left.to_string(),
+                right: r.right.to_string(),
+                products: r.products.iter().map(|p| p.to_string()).collect(),
+                success: r.success,
+                error: r.error,
+            })
+            .collect()
+    }
+
+    /// Simulate for `n` collisions and return only successful reaction records.
+    /// Uses less memory than `simulate_for_logged` for large n.
+    fn simulate_for_logged_filtered(&mut self, n: usize) -> Vec<PyReactionRecord> {
+        self.inner
+            .simulate_for_logged_filtered(n)
+            .into_iter()
+            .map(|r| PyReactionRecord {
+                step: r.step,
+                left: r.left.to_string(),
+                right: r.right.to_string(),
+                products: r.products.iter().map(|p| p.to_string()).collect(),
+                success: r.success,
+                error: r.error,
+            })
+            .collect()
+    }
+
     fn len(&self) -> usize {
         self.inner.len()
     }
@@ -240,7 +314,7 @@ impl PyBTreeGen {
         seed: Option<String>,
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
-        
+
         let cfg = config::BTreeGen {
             size,
             freevar_generation_probability,
@@ -257,12 +331,21 @@ impl PyBTreeGen {
         self.inner.generate().to_string()
     }
 
-    fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner
-            .generate_n(n)
-            .into_iter()
-            .map(|t| t.to_string())
-            .collect()
+    #[pyo3(signature = (n, unique=false))]
+    fn generate_n(&mut self, n: usize, unique: bool) -> Vec<String> {
+        if unique {
+            self.inner
+                .generate_n_unique(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        } else {
+            self.inner
+                .generate_n(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        }
     }
 }
 
@@ -273,16 +356,15 @@ pub struct PyFontanaGen {
 
 #[pymethods]
 impl PyFontanaGen {
-    /// Build a Fontana generator from config values
+    /// Build a Fontana generator from config values.
+    /// No free variable parameters — FontanaGen only produces closed terms.
     #[staticmethod]
-    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, free_variable_probability, max_free_vars, seed=None))]
+    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, seed=None))]
     pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),
         min_depth: u32,
         max_depth: u32,
-        free_variable_probability: f64,
-        max_free_vars: u32,
         seed: Option<String>,
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
@@ -292,8 +374,6 @@ impl PyFontanaGen {
             application_prob_range: app_range,
             min_depth,
             max_depth,
-            free_variable_probability,
-            n_max_free_vars: max_free_vars,
             seed: ConfigSeed::new(seed_bytes),
         };
         Ok(PyFontanaGen {
@@ -307,12 +387,21 @@ impl PyFontanaGen {
     }
 
     /// Convenience: generate N terms
-    pub fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner
-            .generate_n(n)
-            .into_iter()
-            .map(|t| t.to_string())
-            .collect()
+    #[pyo3(signature = (n, unique=false))]
+    pub fn generate_n(&mut self, n: usize, unique: bool) -> Vec<String> {
+        if unique {
+            self.inner
+                .generate_n_unique(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        } else {
+            self.inner
+                .generate_n(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        }
     }
 }
 
@@ -335,6 +424,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySoup>()?;
     m.add_class::<PyReactor>()?;
     m.add_class::<PyReactionError>()?;
+    m.add_class::<PyReactionRecord>()?;
     m.add_class::<PyStandardization>()?;
     m.add_class::<PyBTreeGen>()?;
     m.add_class::<PyFontanaGen>()?;
