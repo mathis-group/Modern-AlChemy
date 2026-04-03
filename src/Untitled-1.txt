@@ -1,0 +1,3 @@
+issue with fontana gen -> sample_var()
+
+testing seed python binders
