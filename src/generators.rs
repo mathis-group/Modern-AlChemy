@@ -184,17 +184,14 @@ impl BTreeGen {
 pub struct FontanaGen {
     min_depth: u32,
     max_depth: u32,
- 
     abs_prob: (f32, f32),
     app_prob: (f32, f32),
- 
     abs_incr: f32,
     app_incr: f32,
- 
     seed: [u8; 32],
     rng: ChaCha8Rng,
 }
- 
+
 impl FontanaGen {
     pub fn new(
         min_depth: u32,
@@ -208,11 +205,11 @@ impl FontanaGen {
         abs_prob.1 = abs_prob.1.clamp(0.0, 1.0);
         app_prob.0 = app_prob.0.clamp(0.0, 1.0);
         app_prob.1 = app_prob.1.clamp(0.0, 1.0);
- 
+
         let steps = (max_depth - 1).max(1);
         let abs_incr = (abs_prob.1 - abs_prob.0) / (steps as f32);
         let app_incr = (app_prob.1 - app_prob.0) / (steps as f32);
- 
+
         FontanaGen {
             min_depth: min_depth.min(max_depth.saturating_sub(1)),
             max_depth,
@@ -224,10 +221,10 @@ impl FontanaGen {
             rng: ChaCha8Rng::from_seed(seed),
         }
     }
- 
+
     pub fn from_config(cfg: &config::FontanaGen) -> FontanaGen {
         let seed = cfg.seed.get();
- 
+
         FontanaGen::new(
             cfg.min_depth,
             cfg.max_depth,
@@ -242,11 +239,11 @@ impl FontanaGen {
             seed,
         )
     }
- 
+
     pub fn generate(&mut self) -> Term {
         self.rand_lambda(0, 0, self.abs_prob.0, self.app_prob.0)
     }
- 
+
     pub fn generate_n(&mut self, n: usize) -> Vec<Term> {
         (0..n).map(|_| self.generate()).collect()
     }
@@ -269,11 +266,11 @@ impl FontanaGen {
 
         results
     }
- 
+
     pub fn seed(&self) -> [u8; 32] {
         self.seed
     }
- 
+
     pub fn rand_lambda(&mut self, depth: u32, abs_depth: u32, p_abs: f32, p_app: f32) -> Term {
         // Terminal case: max depth reached
         if depth >= self.max_depth {
@@ -290,9 +287,12 @@ impl FontanaGen {
         let coin: f32 = self.rng.gen();
 
         if coin <= p_abs_eff {
-            return Term::Abs(Box::new(
-                self.rand_lambda(depth + 1, abs_depth + 1, next_abs, next_app),
-            ));
+            return Term::Abs(Box::new(self.rand_lambda(
+                depth + 1,
+                abs_depth + 1,
+                next_abs,
+                next_app,
+            )));
         }
 
         // Below min_depth or no binders: can't emit Var, must pick Abs or App
@@ -314,10 +314,13 @@ impl FontanaGen {
     }
 
     fn sample_variable(&mut self, abs_depth: u32) -> Term {
-        debug_assert!(abs_depth > 0, "sample_variable called with no enclosing abstractions");
+        debug_assert!(
+            abs_depth > 0,
+            "sample_variable called with no enclosing abstractions"
+        );
         Term::Var(self.rng.gen_range(1..=abs_depth) as usize)
     }
-    
+
     fn clamp_probabilities(p_abs: f32, p_app: f32) -> (f32, f32) {
         let abs = p_abs.clamp(0.0, 1.0);
         let remaining = 1.0 - abs;

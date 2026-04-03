@@ -1,8 +1,8 @@
 // src/python.rs
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
-use serde::{Deserialize, Serialize};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
