@@ -257,12 +257,21 @@ impl PyBTreeGen {
         self.inner.generate().to_string()
     }
 
-    fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner
-            .generate_n(n)
-            .into_iter()
-            .map(|t| t.to_string())
-            .collect()
+    #[pyo3(signature = (n, unique=false))]
+    fn generate_n(&mut self, n: usize, unique: bool) -> Vec<String> {
+        if unique {
+            self.inner
+                .generate_n_unique(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        } else {
+            self.inner
+                .generate_n(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        }
     }
 }
 
@@ -275,14 +284,12 @@ pub struct PyFontanaGen {
 impl PyFontanaGen {
     /// Build a Fontana generator from config values
     #[staticmethod]
-    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, _free_variable_probability, max_vars, seed=None))]
+    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, seed=None))]
     pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),
         min_depth: u32,
         max_depth: u32,
-        _free_variable_probability: f64, // TODO: REMOVE THIS
-        max_vars: u32,
         seed: Option<String>,
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
@@ -292,7 +299,6 @@ impl PyFontanaGen {
             application_prob_range: app_range,
             min_depth,
             max_depth,
-            n_max_vars: max_vars,
             seed: ConfigSeed::new(seed_bytes),
         };
         Ok(PyFontanaGen {
@@ -306,12 +312,21 @@ impl PyFontanaGen {
     }
 
     /// Convenience: generate N terms
-    pub fn generate_n(&mut self, n: usize) -> Vec<String> {
-        self.inner
-            .generate_n(n)
-            .into_iter()
-            .map(|t| t.to_string())
-            .collect()
+    #[pyo3(signature = (n, unique=false))]
+    pub fn generate_n(&mut self, n: usize, unique: bool) -> Vec<String> {
+        if unique {
+            self.inner
+                .generate_n_unique(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        } else {
+            self.inner
+                .generate_n(n)
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect()
+        }
     }
 }
 
