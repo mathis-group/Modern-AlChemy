@@ -132,6 +132,10 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
     expressions.into_iter()
 }
 
+pub fn string_to_term(expression: &String) -> Term {
+    lambda_calculus::parse(expression, lambda_calculus::Classic).unwrap()
+}
+
 pub fn dump_series_to_file<T>(fname: &str, series: &[T], id: &[usize]) -> io::Result<()>
 where
     T: fmt::Debug,

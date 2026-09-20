@@ -6,6 +6,9 @@ use std::{
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
+use crate::config;
+use crate::config::RefillType;
+
 pub trait Particle {
     fn compose(&self, other: &Self) -> Self;
 
@@ -17,6 +20,15 @@ where
     P: Particle,
 {
     fn collide(&self, left: P, right: P) -> Result<T, E>;
+}
+
+// TODO: Make use of the Generator trait and implement as an extensible
+// generator type for each type of expression.
+pub trait Generator<P>
+where 
+    P: Particle,
+{
+    fn generate_n(&self, n: usize) -> Vec<P>;
 }
 
 pub trait Residue<P>
@@ -290,6 +302,31 @@ where
             history,
             polling_interval,
         }
+    }
+
+    /// Cull `wipeout_percent` of the population (rounded down) and replace with
+    /// `ConfigGenerator` generated or `custom_expression` expressions
+    pub fn wipeout(&mut self, wipeout_percent: usize) -> usize {
+        // Get the number of expressions we currently have
+        let n_expr = self.expressions.len();
+
+        // Calculate how many expressions will be culled based on the wipeout percent
+        // TODO: Gotta be a better way to do this type conversion/casting/floor thing
+        let n_wipeout = (self.expressions.len() as f64 * ((wipeout_percent as f64) / 100.0)) as usize;
+        
+        // Cull one expression for each wipeout we have
+        for execution_count in 0..n_wipeout {
+            let cull_index = self.rng.gen_range(0..n_expr - execution_count);
+            let removed_expression = self.expressions.swap_remove(cull_index);
+            println!("Removed Expression: {removed_expression}")
+        }
+        n_wipeout
+    }
+
+    /// Repopulate the soup with the specified expression or from the 
+    /// config specified generator
+    pub fn repopulate(&mut self, refill_type: RefillType, custom_expression: Option<String>){
+        // Unimplemented
     }
 
     /// Print out all expressions within the soup. Defaults to Church notation.

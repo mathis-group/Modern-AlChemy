@@ -9,6 +9,7 @@ pub mod generators;
 pub mod lambda;
 pub mod supercollider;
 pub mod utils;
+pub mod errors;
 
 // New Python wrapper module
 mod python;

@@ -1,11 +1,18 @@
-use alchemy::{config, experiments, generators, lambda, utils};
+use alchemy::{config, experiments, generators, lambda, utils, errors};
+use lambda_calculus::{Term};
 use clap::{Parser, ValueEnum};
 use experiments::{
     discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
 };
-use generators::BTreeGen;
+use generators::{BTreeGen, FontanaGen};
+
+use errors::{ParsingError};
+
 use std::fs::{read_to_string, File};
+use std::iter::repeat_n;
+use std::io;
 use std::io::Write;
+use std::env;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Experiment {
@@ -93,7 +100,13 @@ struct Cli {
 }
 
 fn get_config(cli: &Cli) -> std::io::Result<config::Config> {
-    let mut config = if let Some(filename) = &cli.config_file {
+    let mut config = 
+    if let Some(filename) = &cli.config_file {
+        println!("{filename}");
+        let cwd = env::current_dir()?;
+        // Print the directory path using .display()
+        println!("Current directory: {}", cwd.display());
+
         let contents = read_to_string(filename)?;
         config::Config::from_config_str(&contents)
     } else {
@@ -131,6 +144,25 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
     let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg.reactor_config);
     soup.add_lambda_expressions(expressions);
     soup
+}
+
+
+// TODO: Combine these two functions for generating expressions and move them into generators
+// TODO: Longterm, we should have a generator attribute implemented/attached directly to the soup.
+// the generator should implement a Generator trait in `supercollide.rs` (which should really be renamed to soup)
+// and the expression specific generator should be stored as a member variable on the Soup struct
+pub fn generate_n_expressions(cfg: &config::Config, extend_size: usize) -> Vec<Term> {
+    let expressions = match &cfg.generator_config {
+        config::Generator::BTree(gen_cfg) => {
+            let mut gen = BTreeGen::from_config(gen_cfg);
+            gen.generate_n(extend_size)
+        }
+        config::Generator::Fontana(gen_cfg) => {
+            let mut gen = FontanaGen::from_config(gen_cfg);
+            gen.generate_n(extend_size) // ← returns Vec<Term>
+        }
+    };
+    expressions
 }
 
 fn main() -> std::io::Result<()> {
@@ -235,15 +267,63 @@ fn main() -> std::io::Result<()> {
         generate_expressions_and_seed_soup(&config)
     };
 
-    if let Some(polling_interval) = config.polling_interval {
-        let tape =
-            soup.simulate_and_record(config.run_limit, polling_interval, config.verbose_logging);
-        for soup in tape.history() {
-            println!("{}", soup.population_entropy());
+    // Setup the tape list vector to store each generations history
+    let mut tape_list = Vec::new();
+
+    // Iterate over each for n_generations
+    for gen in 0..config.recursive_config.n_generations {
+        println!("Generation {gen}");
+        // If we have a polling interval configured, push our recordings to the tape
+        // struct list
+        if let Some(polling_interval) = config.polling_interval {
+            tape_list.push(soup.simulate_and_record(config.run_limit, polling_interval, config.verbose_logging));
+        } 
+        // Otherwise simulate normally without recording and print the soup at the end
+        else {
+            soup.simulate_for(config.run_limit, config.verbose_logging);
         }
-    } else {
-        soup.simulate_for(config.run_limit, config.verbose_logging);
+
+        // Recursive wipeout, remove `wipeout_percent` of expressions from the soup
+        let n_wipeout = soup.wipeout(config.recursive_config.wipeout_percent);
+        
+        // And repopulate with expressions of the specified refill_type
+        match &config.recursive_config.refill_type {
+            config::RefillType::ConfigGenerator => {
+                // If configured generator was selected, add those expressions
+                let repop_expressions = generate_n_expressions(&config, n_wipeout);
+                println!("Injecting {:?}", repop_expressions);
+                soup.add_lambda_expressions(repop_expressions);
+            }
+            config::RefillType::CustomExpression => {
+                // Or parse the provided `repopulation_expression` and fill the remaining slots
+                if let Some(repop_expression) = &config.recursive_config.repopulation_expression {
+                    let repop_expressions = repeat_n(utils::string_to_term(repop_expression), n_wipeout);
+                    println!("Injecting {:?}", repop_expressions);
+                    soup.add_lambda_expressions(repop_expressions);
+                } 
+                // If a `repopulation_expression` was not provided but the CustomExpression type was used 
+                // return an error
+                else {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData, 
+                        ParsingError::NoRepopulationExpression
+                    ));                
+                }
+            }
+        }
         soup.print();
+        println!("");
+    }
+
+    // Print the tape history 
+    for (index, tape) in tape_list.iter().enumerate(){
+        // println!("Generation {index}");
+        // for soup in tape.history() {
+        //     println!("{}", soup.population_entropy());
+        //     println!("{}", soup.len());
+        //     soup.print();
+        //     println!("");
+        // }
     }
 
     Ok(())
