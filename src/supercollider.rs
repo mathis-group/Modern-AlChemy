@@ -6,7 +6,6 @@ use std::{
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
-use crate::config;
 use crate::config::RefillType;
 
 pub trait Particle {
@@ -28,7 +27,7 @@ pub trait Generator<P>
 where 
     P: Particle,
 {
-    fn generate_n(&self, n: usize) -> Vec<P>;
+    fn generate_n_particles(&mut self, n: usize) -> Vec<P>;
 }
 
 pub trait Residue<P>
@@ -53,11 +52,12 @@ pub struct ReactionRecord<P: Clone> {
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
 #[derive(Debug, Clone)]
-pub struct Soup<P, C, T, E> {
+pub struct Soup<P, C, G, T, E> {
     // All of these pub(crate)s here are hacky
     pub(crate) expressions: Vec<P>,
     pub(crate) n_collisions: usize,
     pub(crate) collider: C,
+    pub(crate) generator: G,
 
     pub(crate) maintain_constant_population_size: bool,
     pub(crate) discard_parents: bool,
@@ -69,16 +69,17 @@ pub struct Soup<P, C, T, E> {
     pub(crate) e: PhantomData<E>,
 }
 
-pub struct Tape<P, C, T, E> {
-    soup: Soup<P, C, T, E>,
-    history: Vec<Soup<P, C, T, E>>,
+pub struct Tape<P, C, G, T, E> {
+    soup: Soup<P, C, G, T, E>,
+    history: Vec<Soup<P, C, G, T, E>>,
     polling_interval: usize,
 }
 
-impl<P, C, T, E> Soup<P, C, T, E>
+impl<P, C, G, T, E> Soup<P, C, G, T, E>
 where
     P: Particle + Display + Clone,
     C: Collider<P, T, E> + Clone,
+    G: Generator<P> + Clone,
     T: Display + Clone + Residue<P>,
     E: Display + Clone + std::error::Error,
 {
@@ -284,7 +285,7 @@ where
         n: usize,
         polling_interval: usize,
         log: bool,
-    ) -> Tape<P, C, T, E> {
+    ) -> Tape<P, C, G, T, E> {
         let mut history: Vec<Self> = Vec::new();
         for i in 0..n {
             let reaction = self.react();
@@ -297,7 +298,7 @@ where
             }
         }
 
-        Tape::<P, C, T, E> {
+        Tape::<P, C, G, T, E> {
             soup: self.clone(),
             history,
             polling_interval,
@@ -356,18 +357,19 @@ where
     }
 }
 
-impl<P, C, T, E> Tape<P, C, T, E>
+impl<P, C, G, T, E> Tape<P, C, G, T, E>
 where
     P: Particle + Display + Clone,
     C: Collider<P, T, E> + Clone,
+    G: Generator<P> + Clone,
     T: Display + Clone + Residue<P>,
     E: Display + Clone + std::error::Error,
 {
-    pub fn final_state(&self) -> &Soup<P, C, T, E> {
+    pub fn final_state(&self) -> &Soup<P, C, G, T, E> {
         &self.soup
     }
 
-    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, T, E>> {
+    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G, T, E>> {
         self.history.iter()
     }
 

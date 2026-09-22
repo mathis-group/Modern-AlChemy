@@ -2,7 +2,6 @@ use rand::{thread_rng, Rng};
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::RefillType::ConfigGenerator;
 use crate::generators::Standardization;
 
 use crate::utils::{decode_hex, encode_hex};
@@ -60,7 +59,7 @@ impl Recursive {
         Recursive {
             n_generations: 1,
             wipeout_percent: 0,
-            refill_type: ConfigGenerator,
+            refill_type: RefillType::ConfigGenerator,
             repopulation_expression: None
         }
     }

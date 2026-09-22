@@ -141,7 +141,7 @@ pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recur
             gen.generate_n(cfg.sample_size) // ← returns Vec<Term>
         }
     };
-    let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg.reactor_config);
+    let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg);
     soup.add_lambda_expressions(expressions);
     soup
 }
@@ -259,7 +259,7 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut soup = if cli.read_stdin {
-        let mut soup = lambda::recursive::LambdaSoup::from_config(&config.reactor_config);
+        let mut soup = lambda::recursive::LambdaSoup::from_config(&config);
         let expressions = utils::read_inputs();
         soup.add_lambda_expressions(expressions);
         soup

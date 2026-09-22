@@ -6,6 +6,46 @@ use serde::{Deserialize, Serialize};
 use crate::config;
 use crate::config::GenConfig;
 
+use crate::lambda::recursive::LambdaParticle;
+use crate::supercollider::Generator;
+
+
+/// Marker layer: "this is a generator of lambda particles."
+/// Carries no methods yet it's the home for lambda-specific
+/// generator behavior when/if that appears.
+/// We need it to have a single entry point for a particle specific
+/// generator when multiple are available.
+pub trait LambdaGen: Generator<LambdaParticle> {}
+
+impl LambdaGen for BTreeGen {}
+impl LambdaGen for FontanaGen {}
+
+/// The closed set of lambda generators. This is what a Soup holds.
+#[derive(Debug, Clone)]
+pub enum LambdaGenerator {
+    BTree(BTreeGen),
+    Fontana(FontanaGen),
+}
+
+impl Generator<LambdaParticle> for LambdaGenerator {
+    fn generate_n_particles(&mut self, n: usize) -> Vec<LambdaParticle> {
+        match self {
+            Self::BTree(g)   => g.generate_n_particles(n),
+            Self::Fontana(g) => g.generate_n_particles(n),
+        }
+    }
+}
+
+impl LambdaGenerator {
+    /// The single place a runtime config tag becomes a type.
+    pub fn from_config(cfg: &config::Generator) -> Self {
+        match cfg {
+            config::Generator::BTree(c)   => Self::BTree(BTreeGen::from_config(c)),
+            config::Generator::Fontana(c) => Self::Fontana(FontanaGen::from_config(c)),
+        }
+    }
+}
+
 struct BTree {
     n: u32,
     left: Option<Box<BTree>>,
@@ -72,6 +112,7 @@ impl BTree {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct BTreeGen {
     n: u32,
     freevar_p: f64,
@@ -85,6 +126,18 @@ pub struct BTreeGen {
 impl Default for BTreeGen {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Generator<LambdaParticle> for BTreeGen {
+    fn generate_n_particles(&mut self, n: usize) -> Vec<LambdaParticle> {
+        let mut v = Vec::with_capacity(n);
+        for _ in 0..n {
+            let expr = self.generate();
+            let particle = LambdaParticle { expr, recursive: false };
+            v.push(particle);
+        }
+        v
     }
 }
 
@@ -181,6 +234,7 @@ impl BTreeGen {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct FontanaGen {
     min_depth: u32,
     max_depth: u32,
@@ -190,6 +244,18 @@ pub struct FontanaGen {
     app_incr: f32,
     seed: [u8; 32],
     rng: ChaCha8Rng,
+}
+
+impl Generator<LambdaParticle> for FontanaGen {
+    fn generate_n_particles(&mut self, n: usize) -> Vec<LambdaParticle> {
+        let mut v = Vec::with_capacity(n);
+        for _ in 0..n {
+            let expr = self.generate();
+            let particle = LambdaParticle { expr, recursive: false };
+            v.push(particle);
+        }
+        v
+    }
 }
 
 impl FontanaGen {

@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
-use crate::config::{self, ConfigSeed, Reactor as RustReactor};
+use crate::config::{self, Config as RustConfig, ConfigSeed, Reactor as RustReactor};
 use crate::generators::{
     BTreeGen as RustBTreeGen, FontanaGen as RustFontanaGen, Standardization as RustStandardization,
+    LambdaGenerator
 };
 use crate::lambda::recursive::{
     AlchemyCollider, LambdaCollisionError, LambdaCollisionOk, LambdaParticle,
@@ -18,7 +19,7 @@ use crate::utils::{decode_hex, encode_hex};
 
 // Concrete soup alias for the recursive lambda flavor
 type RustSoup =
-    GenericSoup<LambdaParticle, AlchemyCollider, LambdaCollisionOk, LambdaCollisionError>;
+    GenericSoup<LambdaParticle, AlchemyCollider, LambdaGenerator, LambdaCollisionOk, LambdaCollisionError>;
 
 // ============ Helper for Seed Parsing ============
 
@@ -139,6 +140,33 @@ impl PyReactionRecord {
     }
 }
 
+
+// ============ Config wrapper ============
+
+#[pyclass]
+pub struct PyConfig {
+    pub(crate) inner: RustConfig,
+}
+
+#[pymethods]
+impl PyConfig {
+    #[new]
+    fn new() -> Self {
+        PyConfig { inner: RustConfig::new() }
+    }
+
+    /// Same JSON the CLI reads.
+    #[staticmethod]
+    fn from_json(s: &str) -> Self {
+        PyConfig { inner: RustConfig::from_config_str(s) }
+    }
+
+    fn to_json(&self) -> String {
+        self.inner.to_config_str()
+    }
+}
+
+
 // ============ Reactor wrapper ============
 
 #[pyclass]
@@ -205,7 +233,7 @@ impl PySoup {
     }
 
     #[staticmethod]
-    fn from_config(cfg: &PyReactor) -> Self {
+    fn from_config(cfg: &PyConfig) -> Self {
         PySoup {
             inner: RustSoup::from_config(&cfg.inner),
         }
@@ -422,6 +450,7 @@ fn encode_hex_py(bytes: Vec<u8>) -> String {
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySoup>()?;
+    m.add_class::<PyConfig>()?;
     m.add_class::<PyReactor>()?;
     m.add_class::<PyReactionError>()?;
     m.add_class::<PyReactionRecord>()?;

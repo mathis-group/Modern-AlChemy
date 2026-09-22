@@ -4,18 +4,19 @@ use std::marker::PhantomData;
 
 use crate::config;
 use crate::supercollider::{Collider, Particle, Residue, Soup};
+use crate::generators::LambdaGenerator;
 use lambda_calculus::{abs, app, Term, Var};
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 pub type LambdaSoup =
-    Soup<LambdaParticle, AlchemyCollider, LambdaCollisionOk, LambdaCollisionError>;
+    Soup<LambdaParticle, AlchemyCollider, LambdaGenerator, LambdaCollisionOk, LambdaCollisionError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaParticle {
     pub expr: Term,
-    recursive: bool,
+    pub recursive: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -323,18 +324,19 @@ impl fmt::Display for LambdaParticle {
 impl LambdaSoup {
     /// Generate an empty soup with the following configuration options:
     pub fn new() -> Self {
-        LambdaSoup::from_config(&config::Reactor::new())
+        LambdaSoup::from_config(&config::Config::new())
     }
 
     /// Generate an empty soup from a given `config` object.
-    pub fn from_config(cfg: &config::Reactor) -> Self {
-        let seed = cfg.seed.get();
+    pub fn from_config(cfg: &config::Config) -> Self {
+        let seed = cfg.reactor_config.seed.get();
         let rng = ChaCha8Rng::from_seed(seed);
         Self {
             expressions: Vec::new(),
-            collider: AlchemyCollider::from_config(cfg),
-            maintain_constant_population_size: cfg.maintain_constant_population_size,
-            discard_parents: cfg.discard_parents,
+            collider: AlchemyCollider::from_config(&cfg.reactor_config),
+            generator: LambdaGenerator::from_config(&cfg.generator_config),
+            maintain_constant_population_size: cfg.reactor_config.maintain_constant_population_size,
+            discard_parents: cfg.reactor_config.discard_parents,
             rng,
             n_collisions: 0,
             t: PhantomData,
