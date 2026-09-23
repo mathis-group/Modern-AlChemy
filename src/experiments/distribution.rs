@@ -11,9 +11,9 @@ use crate::config::{
     reactor::Reactor
 };
 
-use crate::lambda::soup::LambdaSoup;
+use crate::lambda::{particle::LambdaParticle, soup::LambdaSoup};
 
-use crate::utils::read_inputs;
+use crate::utils::read_particles;
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&Config {
@@ -36,10 +36,10 @@ pub fn one_sample_with_dist() {
     let run_length = 1000000;
     let polling_interval = 1000;
     let polls = run_length / polling_interval;
-    let sample = read_inputs().collect::<Vec<Term>>();
+    let sample: Vec<LambdaParticle> = read_particles().expect("invalid expression on stdin");    
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
 
-    soup.add_lambda_expressions(sample.into_iter().cycle().take(10000));
+    soup.perturb(sample.into_iter().cycle().take(10000));
     let counts = soup.simulate_and_poll(run_length, polling_interval, false, |s| {
         s.expression_counts()
     });

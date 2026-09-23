@@ -3,11 +3,15 @@ use serde::{Deserialize, Serialize};
 
 // Package Imports
 use crate::config::{generator::Generator, reactor::Reactor, recursive::Recursive};
+use crate::enums::ExpressionType;
 
 /// `Config` stores the global configuration of the program.
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
+    /// The type of expression the collider will be operating on
+    pub expression_type: ExpressionType,
+
     /// The number of reactions to run for this simulation. Default: `100000`.
     pub run_limit: usize,
 
@@ -45,6 +49,7 @@ impl Config {
     /// Produce a new `Config` struct with default values.
     pub fn new() -> Self {
         Config {
+            expression_type: ExpressionType::UntypedLambda,
             reactor_config: Reactor::new(),
             generator_config: Generator::new(),
             recursive_config: Recursive::new(),

@@ -1,7 +1,12 @@
-pub trait Particle {
+use crate::errors::ParsingError;
+
+pub trait Particle: Sized {
     fn compose(&self, other: &Self) -> Self;
 
     fn is_isomorphic_to(&self, other: &Self) -> bool;
+
+    fn parse(s: &String) -> Result<Self, ParsingError>;
+
 }
 
 pub trait Collider<P, T, E>

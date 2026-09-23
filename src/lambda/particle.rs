@@ -5,6 +5,7 @@ use lambda_calculus::{app, Term};
 
 // Package Imports
 use crate::traits::Particle;
+use crate::errors::ParsingError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaParticle {
@@ -33,6 +34,16 @@ impl Particle for LambdaParticle {
     fn is_isomorphic_to(&self, other: &Self) -> bool {
         self.expr.is_isomorphic_to(&other.expr)
     }
+
+    fn parse(s: &String) -> Result<Self, ParsingError> {
+        let expr = lambda_calculus::parse(s, lambda_calculus::Classic)
+            .map_err(|e| ParsingError::InvalidExpression(format!("{s}: {e}")))?;
+        Ok(LambdaParticle { 
+            expr, 
+            recursive: false 
+        })
+    }
+
 }
 
 impl fmt::Display for LambdaParticle {

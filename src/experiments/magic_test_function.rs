@@ -22,6 +22,7 @@ use crate::config::{
 };
 
 use crate::lambda::{
+    particle::LambdaParticle,
     soup::LambdaSoup,
     generators::b_tree_gen::BTreeGen,
     utils::{
@@ -31,7 +32,7 @@ use crate::lambda::{
     }
 };
 
-use crate::utils::{dump_series_to_file, read_inputs};
+use crate::utils::{dump_series_to_file, read_particles};
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&Config {
@@ -200,13 +201,13 @@ async fn succ_magic_tests(
 }
 
 async fn simulate_additive_murder(
-    sample: impl Iterator<Item = Term>,
+    sample: impl Iterator<Item = LambdaParticle>,
     id: usize,
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<usize>) {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-    soup.add_lambda_expressions(sample);
+    soup.perturb(sample); 
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
             (
@@ -222,7 +223,7 @@ pub fn add_search_no_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 1000000;
     let polling_interval = 1000;
-    let sample = read_inputs().collect::<Vec<Term>>();
+    let sample: Vec<LambdaParticle> = read_particles().expect("invalid expression on stdin");
     for i in 0..1000 {
         futures.push(spawn(simulate_additive_murder(
             sample.clone().into_iter().cycle().take(10000),

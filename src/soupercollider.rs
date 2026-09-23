@@ -10,10 +10,7 @@ use rand_chacha::ChaCha8Rng;
 //Package Imports
 use crate::traits::{Collider, Generator, Particle, Residue};
 use crate::logging::{ReactionRecord, Tape};
-
-// pub trait Soup<P, C, G, T, E> {
-//     fn add_expressions();
-// }
+use crate::errors::ParsingError;
 
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
@@ -288,6 +285,15 @@ where
     pub fn seed_with_generator(&mut self, n: usize) {
         let particles = self.generator.generate_n_particles(n);
         self.perturb(particles);
+    }
+
+    /// Adds an expression generic to it's Particle type.
+    /// Can accept any input that is a list of strings and implements the Particle trait.
+   pub fn add_expressions(&mut self, sources: Vec<String>) -> Result<(), ParsingError> {
+        for s in sources {
+            self.expressions.push(P::parse(&s)?);
+        }
+        Ok(())
     }
 
     /// Print out all expressions within the soup. Defaults to Church notation.

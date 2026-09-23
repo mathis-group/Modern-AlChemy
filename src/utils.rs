@@ -11,6 +11,8 @@ use crate::experiments::{
     discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
 };
 use crate::enums::Experiment;
+use crate::errors::ParsingError;
+use crate::traits::Particle;
 
 // This was shamelessly stolen from
 // https://play.rust-lang.org/?version=stable&mode=debug&edition=2015&gist=e241493d100ecaadac3c99f37d0f766f
@@ -120,8 +122,8 @@ where
 impl<U, T> Eq for HeapObject<U, T> where U: Ord {}
 
 /// Read lambda expressions from stdin and return an iterator over them
-pub fn read_inputs() -> impl Iterator<Item = Term> {
-    let mut expression_strings = Vec::<String>::new();
+pub fn read_inputs() -> Vec<String> {
+    let mut expression_strings = Vec::new();
     let stdin = io::stdin();
     let reader = BufReader::new(stdin.lock());
 
@@ -132,11 +134,12 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
         }
     }
 
-    let expressions = expression_strings
-        .iter()
-        .map(|s| lambda_calculus::parse(s, lambda_calculus::Classic).unwrap())
-        .collect::<Vec<Term>>();
-    expressions.into_iter()
+    expression_strings
+}
+
+/// Read expressions from stdin and parse them into the caller's particle type.
+pub fn read_particles<P: Particle>() -> Result<Vec<P>, ParsingError> {
+    read_inputs().iter().map(|s| P::parse(s)).collect()
 }
 
 pub fn string_to_term(expression: &String) -> Term {

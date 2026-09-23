@@ -10,6 +10,7 @@ use clap::Parser;
 use alchemy::config::config;
 use alchemy::config::recursive::RefillType;
 use alchemy::errors::ParsingError;
+use alchemy::enums::ExpressionType;
 use alchemy::utils::{run_experiment, read_inputs, string_to_term};
 use alchemy::cli::Cli;
 use alchemy::lambda::soup::LambdaSoup;
@@ -41,7 +42,14 @@ fn main() -> std::io::Result<()> {
 
     // TODO: Genericize this to a trait, have the config specify an expression type
     // and implement a generic soup with it's associated config params
-    let mut soup = LambdaSoup::from_config(&config);
+    // let mut soup = LambdaSoup::from_config(&config);
+
+    let mut soup = 
+        match config.expression_type {
+            ExpressionType::UntypedLambda     => LambdaSoup::from_config(&config),
+            ExpressionType::SimplyTypedLambda => todo!("typed lambda soup"),
+            ExpressionType::Haskell           => todo!("haskell soup"),
+        };
 
     // Generate & print n expressions from the configured generator
     if let Some(n) = cli.generate {
@@ -57,7 +65,12 @@ fn main() -> std::io::Result<()> {
         let expressions = read_inputs();
         // TODO: Make this a generic add_expressions function
         // to allow for any expression type to be added from the cli
-        soup.add_lambda_expressions(expressions);
+        let parse_result = soup.add_expressions(expressions);
+
+        match parse_result {
+            Ok(v)  => v,
+            Err(e) => return Err(From::from(e)),
+        }
     } 
     // Or have the soup seeded with n expressions with the configured generator
     else {
@@ -85,6 +98,7 @@ fn main() -> std::io::Result<()> {
         let n_wipeout = soup.wipeout(config.recursive_config.wipeout_percent);
         
         // And repopulate with expressions of the specified refill_type
+        // TODO: Move this to a function
         match &config.recursive_config.refill_type {
             RefillType::ConfigGenerator => {
                 // If configured generator was selected, add those expressions

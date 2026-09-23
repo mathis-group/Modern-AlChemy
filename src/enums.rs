@@ -9,6 +9,13 @@ pub enum Standardization {
     None,
 }
 
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum ExpressionType {
+    UntypedLambda,
+    SimplyTypedLambda,
+    Haskell,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Experiment {
     // entropy.rs
