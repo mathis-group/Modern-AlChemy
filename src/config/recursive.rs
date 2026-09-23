@@ -18,7 +18,7 @@ pub struct Recursive {
     /// The custom expression to be seeded in place of the wipeout 
     /// population up to sample_size. Default: None
     /// TODO: Extend this to accept multiple expressions for injection
-    pub repopulation_expression: Option<String>
+    pub repopulation_expression: String
 }
 
 impl Recursive {
@@ -28,7 +28,7 @@ impl Recursive {
             n_generations: 1,
             wipeout_percent: 0,
             refill_type: RefillType::ConfigGenerator,
-            repopulation_expression: None
+            repopulation_expression: String::from("\\x.\\y.x y")
         }
     }
 }

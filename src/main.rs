@@ -60,8 +60,7 @@ fn main() -> std::io::Result<()> {
     // Add expressions input through the CLI
     if cli.read_stdin {
         let expressions = read_inputs();
-        // TODO: Make this a generic add_expressions function
-        // to allow for any expression type to be added from the cli
+        // Parse the expressions and add to the soup
         let parse_result = soup.add_expressions(expressions);
 
         match parse_result {
@@ -95,31 +94,8 @@ fn main() -> std::io::Result<()> {
         let n_wipeout = soup.wipeout(config.recursive_config.wipeout_percent);
         
         // And repopulate with expressions of the specified refill_type
-        // TODO: Move this to a function
-        match &config.recursive_config.refill_type {
-            RefillType::ConfigGenerator => {
-                // If configured generator was selected, add those expressions
-                let repop_expressions = soup.generator.generate_n_particles(n_wipeout);
-                println!("Injecting {:?}", repop_expressions);
-                soup.expressions.extend(repop_expressions);
-            }
-            RefillType::CustomExpression => {
-                // Or parse the provided `repopulation_expression` and fill the remaining slots
-                if let Some(repop_expression) = &config.recursive_config.repopulation_expression {
-                    let repop_expressions = repeat_n(string_to_term(repop_expression), n_wipeout);
-                    println!("Injecting {:?}", repop_expressions);
-                    soup.add_lambda_expressions(repop_expressions);
-                } 
-                // If a `repopulation_expression` was not provided but the CustomExpression type was used 
-                // return an error
-                else {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData, 
-                        ParsingError::NoRepopulationExpression
-                    ));                
-                }
-            }
-        }
+        soup.repopulate(n_wipeout, &config.recursive_config);
+        
         soup.print();
         println!("");
     }

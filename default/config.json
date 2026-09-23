@@ -30,6 +30,6 @@
     "n_generations": 1,
     "wipeout_percent": 0,
     "refill_type": "CustomExpression",
-    "repopulation_expression": null
+    "repopulation_expression": "\\x.\\y.x y"
   }
 }

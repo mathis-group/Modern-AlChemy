@@ -6,7 +6,6 @@ pub trait Particle: Sized {
     fn is_isomorphic_to(&self, other: &Self) -> bool;
 
     fn parse(s: &String) -> Result<Self, ParsingError>;
-
 }
 
 pub trait Collider<P, T, E>
