@@ -5,15 +5,26 @@ use async_std::task::{block_on, spawn};
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::{app, Term};
 
-use crate::{
-    config::{self, ConfigSeed},
-    generators::BTreeGen,
-    lambda::recursive::{reduce_with_limit, LambdaSoup},
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor,
+    generators::b_tree_gen::BTreeGen as BTreeGenConfig,
 };
 
+use crate::lambda::{
+    soup::LambdaSoup,
+    generators::b_tree_gen::BTreeGen,
+    utils::{
+        reduce_with_limit,
+    }
+};
+
+use crate::enums::Standardization;
+
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Config {
-        reactor_config: config::Reactor {
+    LambdaSoup::from_config(&Config {
+        reactor_config: Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,
@@ -29,10 +40,10 @@ fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
 }
 
 fn experiment_gen(seed: ConfigSeed) -> BTreeGen {
-    BTreeGen::from_config(&config::BTreeGen {
+    BTreeGen::from_config(&BTreeGenConfig {
         size: 20,
         freevar_generation_probability: 0.2,
-        standardization: crate::generators::Standardization::Prefix,
+        standardization: Standardization::Prefix,
         n_max_free_vars: 6,
         seed,
     })
@@ -119,7 +130,7 @@ where
 }
 
 pub fn look_for_xorset() {
-    let mut gen = experiment_gen(config::ConfigSeed::new([0; 32]));
+    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     let run_length = 10000000;
     let polling_interval = 1000;
@@ -148,7 +159,7 @@ pub fn look_for_xorset() {
 }
 
 pub fn look_for_not_xorset() {
-    let mut gen = experiment_gen(config::ConfigSeed::new([0; 32]));
+    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     let run_length = 10000000;
     let polling_interval = 1000;

@@ -1,173 +1,23 @@
-use alchemy::{config, experiments, generators, lambda, utils, errors};
-use lambda_calculus::{Term};
-use clap::{Parser, ValueEnum};
-use experiments::{
-    discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
-};
-use generators::{BTreeGen, FontanaGen};
-
-use errors::{ParsingError};
-
-use std::fs::{read_to_string, File};
+// Global Imports
+use std::fs::File;
 use std::iter::repeat_n;
 use std::io;
 use std::io::Write;
-use std::env;
+use alchemy::traits::Generator;
+use clap::Parser;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
-pub enum Experiment {
-    // entropy.rs
-    EntropyAndFailures,
-    SyncEntropyAndFailures,
-    EntropyTimeSeries,
-
-    // search_by_behavior.rs
-    XorsetSearch,
-    NotXorsetSearch,
-
-    // distribution.rs
-    DistributionTimeSeries,
-
-    // magic_test_function.rs
-    AddSearchNoTest,
-    AddSearchWithTest,
-    SuccSearchWithTest,
-
-    // kinetics.rs
-    SuccKinetics,
-
-    // discovery.rs
-    MeasureInitialPopulation,
-    AddSccPopulationFromRandomInputs,
-    AddSccPopulationFromSkiInputs,
-    AddSccPopulationFromSkipInputs,
-    SccPopulationFromRandomInputsWithTests,
-    AddPopulationFromRandomInputsWithTests,
-    AddPopulationFromRandomInputsWithAddSuccTests,
-    SccPopulationFromSkiInputsWithTests,
-    AddPopulationFromSkiInputsWithTests,
-    AddPopulationFromSkiInputsWithAddSuccTests,
-    AddPopulationFromSkiInputsWithBatchedAddSuccTests,
-    AddtwoPopulationFromSkiInputsWithAddtwoTests,
-    AddPopulationFromSkipInputsWithAddSuccTests,
-}
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    /// Fail a reaction if it takes more than `reduction_cutoff` steps to reduce. If set, this
-    /// flag overwrites the `reactor_config.reactor_config` configuration option.
-    #[arg(short = 'f', long)]
-    reduction_cutoff: Option<usize>,
-
-    /// Generate a tape that snapshots the state of the reactor every `polling_interval`
-    /// reactions. If set, this flag overwrites the `polling_interval` configuration option.
-    #[arg(short, long)]
-    polling_interval: Option<usize>,
-
-    /// Number of reactions to run before printing out final soup. If set, this flag overwrites the
-    /// `run_limit` configuration option.
-    #[arg(short, long)]
-    run_limit: Option<usize>,
-
-    /// Explicit path to configuration file
-    #[arg(short, long)]
-    config_file: Option<String>,
-
-    /// Dump out the current config and exit
-    #[arg(long)]
-    dump_config: bool,
-
-    /// Run an experiment and exit
-    #[arg(short, long)]
-    experiment: Option<Experiment>,
-
-    /// Make a default config file in the current directory and exit
-    #[arg(short, long)]
-    make_default_config: bool,
-
-    /// Generate n lambda expresions and exit
-    #[arg(long)]
-    generate: Option<u32>,
-
-    /// Read expressions from stdin instead of generating own expressions
-    #[arg(long)]
-    read_stdin: bool,
-
-    /// Log each reaction
-    #[arg(long)]
-    log: bool,
-}
-
-fn get_config(cli: &Cli) -> std::io::Result<config::Config> {
-    let mut config = 
-    if let Some(filename) = &cli.config_file {
-        println!("{filename}");
-        let cwd = env::current_dir()?;
-        // Print the directory path using .display()
-        println!("Current directory: {}", cwd.display());
-
-        let contents = read_to_string(filename)?;
-        config::Config::from_config_str(&contents)
-    } else {
-        config::Config::new()
-    };
-
-    if let Some(limit) = cli.run_limit {
-        config.set_run_limit(limit);
-    }
-    if let Some(cutoff) = cli.reduction_cutoff {
-        config.set_reduction_cutoff(cutoff);
-    }
-    if cli.polling_interval.is_some() {
-        config.set_polling_interval(cli.polling_interval);
-    }
-    if cli.log {
-        config.set_verbose_logging(cli.log)
-    }
-
-    Ok(config)
-}
-
-// main.rs
-pub fn generate_expressions_and_seed_soup(cfg: &config::Config) -> lambda::recursive::LambdaSoup {
-    let expressions = match &cfg.generator_config {
-        config::Generator::BTree(gen_cfg) => {
-            let mut gen = generators::BTreeGen::from_config(gen_cfg);
-            gen.generate_n(cfg.sample_size)
-        }
-        config::Generator::Fontana(gen_cfg) => {
-            let mut gen = generators::FontanaGen::from_config(gen_cfg);
-            gen.generate_n(cfg.sample_size) // ← returns Vec<Term>
-        }
-    };
-    let mut soup = lambda::recursive::LambdaSoup::from_config(&cfg);
-    soup.add_lambda_expressions(expressions);
-    soup
-}
-
-
-// TODO: Combine these two functions for generating expressions and move them into generators
-// TODO: Longterm, we should have a generator attribute implemented/attached directly to the soup.
-// the generator should implement a Generator trait in `supercollide.rs` (which should really be renamed to soup)
-// and the expression specific generator should be stored as a member variable on the Soup struct
-pub fn generate_n_expressions(cfg: &config::Config, extend_size: usize) -> Vec<Term> {
-    let expressions = match &cfg.generator_config {
-        config::Generator::BTree(gen_cfg) => {
-            let mut gen = BTreeGen::from_config(gen_cfg);
-            gen.generate_n(extend_size)
-        }
-        config::Generator::Fontana(gen_cfg) => {
-            let mut gen = FontanaGen::from_config(gen_cfg);
-            gen.generate_n(extend_size) // ← returns Vec<Term>
-        }
-    };
-    expressions
-}
+// Package Imports
+use alchemy::config::config;
+use alchemy::config::recursive::RefillType;
+use alchemy::errors::ParsingError;
+use alchemy::utils::{run_experiment, read_inputs, string_to_term};
+use alchemy::cli::Cli;
+use alchemy::lambda::soup::LambdaSoup;
 
 fn main() -> std::io::Result<()> {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
 
+    // Generate a default config and write it to `config.json`
     if cli.make_default_config {
         let config_path = "config.json";
         let mut config_file = File::create(config_path)?;
@@ -175,106 +25,54 @@ fn main() -> std::io::Result<()> {
         return Ok(());
     }
 
-    let config = get_config(&cli)?;
+    let config = cli.get_config()?;
 
+    // Print to config to the console
     if cli.dump_config {
         println!("{}", config.to_config_str());
         return Ok(());
     }
 
-    if let Some(n) = cli.generate {
-        match &config.generator_config {
-            config::Generator::BTree(gen_cfg) => {
-                let mut gen = BTreeGen::from_config(gen_cfg);
-                for _ in 0..n {
-                    println!("{:?}", gen.generate())
-                }
-            }
-            config::Generator::Fontana(gen_cfg) => {
-                let mut gen = generators::FontanaGen::from_config(gen_cfg);
-                for _ in 0..n {
-                    println!("{:?}", gen.generate())
-                }
-            }
-        }
-        return Ok(());
-    }
-
+    // Run a specified experiment
     if let Some(e) = cli.experiment {
-        match e {
-            Experiment::EntropyAndFailures => entropy::entropy_and_failures(),
-            Experiment::SyncEntropyAndFailures => entropy::sync_entropy_and_failures(),
-            Experiment::EntropyTimeSeries => entropy::entropy_time_series(),
+        run_experiment(e);
+        return Ok(());
+    }
 
-            Experiment::XorsetSearch => search_by_behavior::look_for_xorset(),
-            Experiment::NotXorsetSearch => search_by_behavior::look_for_not_xorset(),
+    // TODO: Genericize this to a trait, have the config specify an expression type
+    // and implement a generic soup with it's associated config params
+    let mut soup = LambdaSoup::from_config(&config);
 
-            Experiment::DistributionTimeSeries => distribution::one_sample_with_dist(),
-
-            Experiment::AddSearchWithTest => magic_test_function::add_search_with_test(),
-            Experiment::SuccSearchWithTest => magic_test_function::succ_search_with_test(),
-            Experiment::AddSearchNoTest => magic_test_function::add_search_no_test(),
-
-            Experiment::SuccKinetics => kinetics::kinetic_succ_experiment(),
-
-            Experiment::MeasureInitialPopulation => discovery::measure_initial_population(),
-            Experiment::AddSccPopulationFromRandomInputs => {
-                discovery::add_scc_population_from_random_inputs()
-            }
-            Experiment::AddSccPopulationFromSkiInputs => {
-                discovery::add_scc_population_from_ski_inputs()
-            }
-            Experiment::AddSccPopulationFromSkipInputs => {
-                discovery::add_scc_population_from_skip_inputs()
-            }
-            Experiment::SccPopulationFromRandomInputsWithTests => {
-                discovery::scc_population_from_random_inputs_with_tests()
-            }
-            Experiment::AddPopulationFromRandomInputsWithTests => {
-                discovery::add_population_from_random_inputs_with_tests()
-            }
-            Experiment::AddPopulationFromRandomInputsWithAddSuccTests => {
-                discovery::add_population_from_random_inputs_with_add_succ_tests()
-            }
-            Experiment::SccPopulationFromSkiInputsWithTests => {
-                discovery::scc_population_from_ski_inputs_with_tests()
-            }
-            Experiment::AddPopulationFromSkiInputsWithTests => {
-                discovery::add_population_from_ski_inputs_with_tests()
-            }
-            Experiment::AddPopulationFromSkiInputsWithAddSuccTests => {
-                discovery::add_population_from_ski_inputs_with_add_succ_tests()
-            }
-            Experiment::AddtwoPopulationFromSkiInputsWithAddtwoTests => {
-                discovery::addtwo_population_from_ski_inputs_with_addtwo_tests()
-            }
-            Experiment::AddPopulationFromSkiInputsWithBatchedAddSuccTests => {
-                discovery::add_population_from_ski_inputs_with_batchedadd_succ_tests()
-            }
-            Experiment::AddPopulationFromSkipInputsWithAddSuccTests => {
-                discovery::add_population_from_skip_inputs_with_add_succ_tests()
-            }
+    // Generate & print n expressions from the configured generator
+    if let Some(n) = cli.generate {
+        let particles = soup.generator.generate_n_particles(n);
+        for p in particles {
+            println!("{:?}", p);
         }
         return Ok(());
     }
 
-    let mut soup = if cli.read_stdin {
-        let mut soup = lambda::recursive::LambdaSoup::from_config(&config);
-        let expressions = utils::read_inputs();
+    // Add expressions input through the CLI
+    if cli.read_stdin {
+        let expressions = read_inputs();
+        // TODO: Make this a generic add_expressions function
+        // to allow for any expression type to be added from the cli
         soup.add_lambda_expressions(expressions);
-        soup
-    } else {
-        generate_expressions_and_seed_soup(&config)
+    } 
+    // Or have the soup seeded with n expressions with the configured generator
+    else {
+        soup.seed_with_generator(config.sample_size);
     };
 
     // Setup the tape list vector to store each generations history
     let mut tape_list = Vec::new();
 
+    
+    // ------------- Recursive Experiment -------------
     // Iterate over each for n_generations
     for gen in 0..config.recursive_config.n_generations {
         println!("Generation {gen}");
-        // If we have a polling interval configured, push our recordings to the tape
-        // struct list
+        // If we have a polling interval configured, push our recordings to the tape struct list
         if let Some(polling_interval) = config.polling_interval {
             tape_list.push(soup.simulate_and_record(config.run_limit, polling_interval, config.verbose_logging));
         } 
@@ -288,16 +86,16 @@ fn main() -> std::io::Result<()> {
         
         // And repopulate with expressions of the specified refill_type
         match &config.recursive_config.refill_type {
-            config::RefillType::ConfigGenerator => {
+            RefillType::ConfigGenerator => {
                 // If configured generator was selected, add those expressions
-                let repop_expressions = generate_n_expressions(&config, n_wipeout);
+                let repop_expressions = soup.generator.generate_n_particles(n_wipeout);
                 println!("Injecting {:?}", repop_expressions);
-                soup.add_lambda_expressions(repop_expressions);
+                soup.expressions.extend(repop_expressions);
             }
-            config::RefillType::CustomExpression => {
+            RefillType::CustomExpression => {
                 // Or parse the provided `repopulation_expression` and fill the remaining slots
                 if let Some(repop_expression) = &config.recursive_config.repopulation_expression {
-                    let repop_expressions = repeat_n(utils::string_to_term(repop_expression), n_wipeout);
+                    let repop_expressions = repeat_n(string_to_term(repop_expression), n_wipeout);
                     println!("Injecting {:?}", repop_expressions);
                     soup.add_lambda_expressions(repop_expressions);
                 } 
@@ -313,17 +111,6 @@ fn main() -> std::io::Result<()> {
         }
         soup.print();
         println!("");
-    }
-
-    // Print the tape history 
-    for (index, tape) in tape_list.iter().enumerate(){
-        // println!("Generation {index}");
-        // for soup in tape.history() {
-        //     println!("{}", soup.population_entropy());
-        //     println!("{}", soup.len());
-        //     soup.print();
-        //     println!("");
-        // }
     }
 
     Ok(())

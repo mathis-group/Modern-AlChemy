@@ -1,0 +1,44 @@
+// Global Imports
+use std::fmt::{Debug, Display};
+
+// Package Imports
+use crate::soupercollider::Soup;
+use crate::traits::{Particle, Collider, Generator, Residue};
+
+/// A single logged reaction event, capturing parents, products, and outcome.
+#[derive(Debug, Clone)]
+pub struct ReactionRecord<P: Clone> {
+    pub step: usize,
+    pub left: P,
+    pub right: P,
+    pub products: Vec<P>,
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+pub struct Tape<P, C, G, T, E> {
+    pub soup: Soup<P, C, G, T, E>,
+    pub history: Vec<Soup<P, C, G, T, E>>,
+    pub polling_interval: usize,
+}
+
+impl<P, C, G, T, E> Tape<P, C, G, T, E>
+where
+    P: Particle + Display + Clone,
+    C: Collider<P, T, E> + Clone,
+    G: Generator<P> + Clone,
+    T: Display + Clone + Residue<P>,
+    E: Display + Clone + std::error::Error,
+{
+    pub fn final_state(&self) -> &Soup<P, C, G, T, E> {
+        &self.soup
+    }
+
+    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G, T, E>> {
+        self.history.iter()
+    }
+
+    pub fn polling_interval(&self) -> usize {
+        self.polling_interval
+    }
+}

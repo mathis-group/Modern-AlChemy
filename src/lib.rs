@@ -5,10 +5,13 @@ use pyo3::prelude::*;
 pub mod analysis;
 pub mod config;
 pub mod experiments;
-pub mod generators;
+pub mod enums;
 pub mod lambda;
-pub mod supercollider;
+pub mod soupercollider;
+pub mod logging;
+pub mod traits;
 pub mod utils;
+pub mod cli;
 pub mod errors;
 
 // New Python wrapper module

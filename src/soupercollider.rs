@@ -1,3 +1,4 @@
+// Global Imports
 use std::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -6,73 +7,32 @@ use std::{
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
-use crate::config::RefillType;
+//Package Imports
+use crate::traits::{Collider, Generator, Particle, Residue};
+use crate::logging::{ReactionRecord, Tape};
 
-pub trait Particle {
-    fn compose(&self, other: &Self) -> Self;
-
-    fn is_isomorphic_to(&self, other: &Self) -> bool;
-}
-
-pub trait Collider<P, T, E>
-where
-    P: Particle,
-{
-    fn collide(&self, left: P, right: P) -> Result<T, E>;
-}
-
-// TODO: Make use of the Generator trait and implement as an extensible
-// generator type for each type of expression.
-pub trait Generator<P>
-where 
-    P: Particle,
-{
-    fn generate_n_particles(&mut self, n: usize) -> Vec<P>;
-}
-
-pub trait Residue<P>
-where
-    P: Particle,
-{
-    fn particles(&self) -> impl Iterator<Item = P>;
-    fn count(&self) -> usize;
-}
-
-/// A single logged reaction event, capturing parents, products, and outcome.
-#[derive(Debug, Clone)]
-pub struct ReactionRecord<P: Clone> {
-    pub step: usize,
-    pub left: P,
-    pub right: P,
-    pub products: Vec<P>,
-    pub success: bool,
-    pub error: Option<String>,
-}
+// pub trait Soup<P, C, G, T, E> {
+//     fn add_expressions();
+// }
 
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
 #[derive(Debug, Clone)]
 pub struct Soup<P, C, G, T, E> {
     // All of these pub(crate)s here are hacky
-    pub(crate) expressions: Vec<P>,
-    pub(crate) n_collisions: usize,
-    pub(crate) collider: C,
-    pub(crate) generator: G,
+    pub expressions: Vec<P>,
+    pub n_collisions: usize,
+    pub collider: C,
+    pub generator: G,
 
-    pub(crate) maintain_constant_population_size: bool,
-    pub(crate) discard_parents: bool,
+    pub maintain_constant_population_size: bool,
+    pub discard_parents: bool,
 
-    pub(crate) rng: ChaCha8Rng,
+    pub rng: ChaCha8Rng,
 
     // TODO: Figure out how to get rid of these horrible phantomdatas
-    pub(crate) t: PhantomData<T>,
-    pub(crate) e: PhantomData<E>,
-}
-
-pub struct Tape<P, C, G, T, E> {
-    soup: Soup<P, C, G, T, E>,
-    history: Vec<Soup<P, C, G, T, E>>,
-    polling_interval: usize,
+    pub t: PhantomData<T>,
+    pub e: PhantomData<E>,
 }
 
 impl<P, C, G, T, E> Soup<P, C, G, T, E>
@@ -324,10 +284,10 @@ where
         n_wipeout
     }
 
-    /// Repopulate the soup with the specified expression or from the 
-    /// config specified generator
-    pub fn repopulate(&mut self, refill_type: RefillType, custom_expression: Option<String>){
-        // Unimplemented
+    /// Generate and add n particles to an existing soup
+    pub fn seed_with_generator(&mut self, n: usize) {
+        let particles = self.generator.generate_n_particles(n);
+        self.perturb(particles);
     }
 
     /// Print out all expressions within the soup. Defaults to Church notation.
@@ -354,26 +314,5 @@ where
     /// Get the number of successful collisions
     pub fn collisions(&self) -> usize {
         self.n_collisions
-    }
-}
-
-impl<P, C, G, T, E> Tape<P, C, G, T, E>
-where
-    P: Particle + Display + Clone,
-    C: Collider<P, T, E> + Clone,
-    G: Generator<P> + Clone,
-    T: Display + Clone + Residue<P>,
-    E: Display + Clone + std::error::Error,
-{
-    pub fn final_state(&self) -> &Soup<P, C, G, T, E> {
-        &self.soup
-    }
-
-    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G, T, E>> {
-        self.history.iter()
-    }
-
-    pub fn polling_interval(&self) -> usize {
-        self.polling_interval
     }
 }

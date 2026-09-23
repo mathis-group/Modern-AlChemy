@@ -6,15 +6,20 @@ use serde::{Deserialize, Serialize};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
-use crate::config::{self, Config as RustConfig, ConfigSeed, Reactor as RustReactor};
-use crate::generators::{
-    BTreeGen as RustBTreeGen, FontanaGen as RustFontanaGen, Standardization as RustStandardization,
-    LambdaGenerator
+use crate::enums::Standardization as RustStandardization;
+use crate::config::config::{self, Config as RustConfig};
+use crate::config::{config_seed::ConfigSeed, reactor::Reactor as RustReactor};
+use crate::config::generators::{b_tree_gen::BTreeGen as BTreeGenConfig, fontana_gen::FontanaGen as FontanaGenConfig};
+use crate::lambda::generator::LambdaGenerator;
+use crate::lambda::generators::{ b_tree_gen::BTreeGen as RustBTreeGen, fontana_gen::FontanaGen as RustFontanaGen };
+
+use crate::lambda::{
+    collider::AlchemyCollider,
+    particle::LambdaParticle,
+    result::{LambdaCollisionError, LambdaCollisionOk}
 };
-use crate::lambda::recursive::{
-    AlchemyCollider, LambdaCollisionError, LambdaCollisionOk, LambdaParticle,
-};
-use crate::supercollider::Soup as GenericSoup;
+
+use crate::soupercollider::Soup as GenericSoup;
 use crate::utils::{decode_hex, encode_hex};
 
 // Concrete soup alias for the recursive lambda flavor
@@ -343,7 +348,7 @@ impl PyBTreeGen {
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
 
-        let cfg = config::BTreeGen {
+        let cfg = BTreeGenConfig {
             size,
             freevar_generation_probability,
             n_max_free_vars: max_free_vars,
@@ -397,7 +402,7 @@ impl PyFontanaGen {
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
 
-        let cfg = config::FontanaGen {
+        let cfg = FontanaGenConfig {
             abstraction_prob_range: abs_range,
             application_prob_range: app_range,
             min_depth,

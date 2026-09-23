@@ -5,15 +5,25 @@ use async_std::task::{block_on, spawn};
 use futures::{stream::FuturesUnordered, StreamExt};
 use lambda_calculus::Term;
 
-use crate::{
-    config::{self, ConfigSeed},
-    generators::BTreeGen,
-    lambda::recursive::LambdaSoup,
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor,
+    generators::b_tree_gen::BTreeGen as BTreeGenConfig
 };
 
+use crate::lambda::{
+    generators::b_tree_gen::BTreeGen,
+    utils::reduce_with_limit
+};
+
+use crate::lambda::soup::LambdaSoup;
+
+use crate::enums::Standardization;
+
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Config {
-        reactor_config: config::Reactor {
+    LambdaSoup::from_config(&Config {
+        reactor_config: Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,
@@ -29,10 +39,10 @@ fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
 }
 
 fn experiment_gen(seed: ConfigSeed) -> BTreeGen {
-    BTreeGen::from_config(&config::BTreeGen {
+    BTreeGen::from_config(&BTreeGenConfig {
         size: 20,
         freevar_generation_probability: 0.2,
-        standardization: crate::generators::Standardization::Prefix,
+        standardization: Standardization::Prefix,
         n_max_free_vars: 6,
         seed,
     })

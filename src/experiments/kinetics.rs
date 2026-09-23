@@ -6,17 +6,20 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use lambda_calculus::{data::num::church::succ, Term};
 use rand::random;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::LambdaSoup,
-    utils::dump_series_to_file,
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor
 };
 
+use crate::lambda::soup::LambdaSoup;
+
+use crate::utils::{read_inputs, dump_series_to_file};
 use super::magic_test_function::{asymmetric_skip_sample, test_succ};
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Config {
-        reactor_config: config::Reactor {
+    LambdaSoup::from_config(&Config {
+        reactor_config: Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,

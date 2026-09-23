@@ -5,15 +5,19 @@ use std::collections::HashMap;
 
 use lambda_calculus::Term;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::LambdaSoup,
-    utils::read_inputs,
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor
 };
 
+use crate::lambda::soup::LambdaSoup;
+
+use crate::utils::read_inputs;
+
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Config {
-        reactor_config: config::Reactor {
+    LambdaSoup::from_config(&Config {
+        reactor_config: Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,

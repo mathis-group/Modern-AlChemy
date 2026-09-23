@@ -15,15 +15,27 @@ use lambda_calculus::{
 };
 use rand::random;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::{has_two_args, is_truthy, uses_both_arguments, LambdaSoup},
-    utils::{dump_series_to_file, read_inputs},
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor
 };
 
+use crate::lambda::{
+    soup::LambdaSoup,
+    generators::b_tree_gen::BTreeGen,
+    utils::{
+        has_two_args,
+        is_truthy,
+        uses_both_arguments
+    }
+};
+
+use crate::utils::{dump_series_to_file, read_inputs};
+
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Config {
-        reactor_config: config::Reactor {
+    LambdaSoup::from_config(&Config {
+        reactor_config: Reactor {
             rules: vec![String::from("\\x.\\y.x y")],
             discard_copy_actions: false,
             discard_identity: false,
