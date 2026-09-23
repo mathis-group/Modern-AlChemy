@@ -1,4 +1,5 @@
 {
+  "expression_type": "UntypedLambda",
   "run_limit": 100000,
   "sample_size": 1000,
   "polling_interval": null,

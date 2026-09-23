@@ -1,4 +1,5 @@
 {
+  "expression_type": "UntypedLambda",
   "run_limit": 10000,
   "sample_size": 100,
   "polling_interval": null,
@@ -28,7 +29,7 @@
   "recursive_config": {
     "n_generations": 1,
     "wipeout_percent": 0,
-    "refill_type": "ConfigGenerator",
-    "custom_expression": null
+    "refill_type": "CustomExpression",
+    "repopulation_expression": "\\x.\\y.x y"
   }
 }
