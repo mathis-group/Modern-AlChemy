@@ -94,7 +94,12 @@ fn main() -> std::io::Result<()> {
         let n_wipeout = soup.wipeout(config.recursive_config.wipeout_percent);
         
         // And repopulate with expressions of the specified refill_type
-        soup.repopulate(n_wipeout, &config.recursive_config);
+        let repopulate_result = soup.repopulate(n_wipeout, &config.recursive_config);
+        // Return an error if we had an issue parsing the repopulation
+        match repopulate_result {
+            Ok(v)  => v,
+            Err(e) => return Err(From::from(e)),
+        }
         
         soup.print();
         println!("");
