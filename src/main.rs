@@ -40,10 +40,7 @@ fn main() -> std::io::Result<()> {
         return Ok(());
     }
 
-    // TODO: Genericize this to a trait, have the config specify an expression type
-    // and implement a generic soup with it's associated config params
-    // let mut soup = LambdaSoup::from_config(&config);
-
+    // Create the soup from the configured soup type
     let mut soup = 
         match config.expression_type {
             ExpressionType::UntypedLambda     => LambdaSoup::from_config(&config),
