@@ -1,17 +1,13 @@
 // Global Imports
 use std::fs::File;
-use std::iter::repeat_n;
-use std::io;
 use std::io::Write;
 use alchemy::traits::Generator;
 use clap::Parser;
 
 // Package Imports
 use alchemy::config::config;
-use alchemy::config::recursive::RefillType;
-use alchemy::errors::ParsingError;
 use alchemy::enums::ExpressionType;
-use alchemy::utils::{run_experiment, read_inputs, string_to_term};
+use alchemy::utils::{run_experiment, read_inputs};
 use alchemy::cli::Cli;
 use alchemy::lambda::soup::LambdaSoup;
 
