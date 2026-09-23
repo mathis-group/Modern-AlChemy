@@ -126,7 +126,11 @@ impl AlchemyCollider {
     }
 }
 
-impl Collider<LambdaParticle, LambdaCollisionOk, LambdaCollisionError> for AlchemyCollider {
+impl Collider<LambdaParticle> for AlchemyCollider {
+
+    type Product = LambdaCollisionOk;
+    type Error   = LambdaCollisionError;
+
     /// Return the result of ((`rule` `left`) `right`), up to a limit of
     /// `self.reduction_limit`.
     fn collide(

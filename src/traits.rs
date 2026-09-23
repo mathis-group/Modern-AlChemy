@@ -1,3 +1,7 @@
+// Global Imports
+use std::fmt::Display;
+
+// Package Imports
 use crate::errors::ParsingError;
 
 pub trait Particle: Sized {
@@ -8,11 +12,14 @@ pub trait Particle: Sized {
     fn parse(s: &String) -> Result<Self, ParsingError>;
 }
 
-pub trait Collider<P, T, E>
+pub trait Collider<P>
 where
     P: Particle,
 {
-    fn collide(&self, left: P, right: P) -> Result<T, E>;
+    type Product: Residue<P> + Display + Clone;
+    type Error: std::error::Error + Display + Clone;
+
+    fn collide(&self, left: P, right: P) -> Result<Self::Product, Self::Error>;
 }
 
 pub trait Generator<P>

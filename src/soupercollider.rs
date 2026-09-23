@@ -1,8 +1,5 @@
 // Global Imports
-use std::{
-    fmt::{Debug, Display},
-    marker::PhantomData,
-};
+use std::fmt::{Debug, Display};
 use std::iter::repeat_n;
 
 use rand::Rng;
@@ -16,7 +13,7 @@ use crate::errors::ParsingError;
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
 #[derive(Debug, Clone)]
-pub struct Soup<P, C, G, T, E> {
+pub struct Soup<P, C, G> {
     // All of these pub(crate)s here are hacky
     pub expressions: Vec<P>,
     pub n_collisions: usize,
@@ -27,19 +24,13 @@ pub struct Soup<P, C, G, T, E> {
     pub discard_parents: bool,
 
     pub rng: ChaCha8Rng,
-
-    // TODO: Figure out how to get rid of these horrible phantomdatas
-    pub t: PhantomData<T>,
-    pub e: PhantomData<E>,
 }
 
-impl<P, C, G, T, E> Soup<P, C, G, T, E>
+impl<P, C, G> Soup<P, C, G>
 where
     P: Particle + Display + Clone,
-    C: Collider<P, T, E> + Clone,
-    G: Generator<P> + Clone,
-    T: Display + Clone + Residue<P>,
-    E: Display + Clone + std::error::Error,
+    C: Collider<P> + Clone,
+    G: Generator<P> + Clone
 {
     /// Introduce all expressions in `expressions` into the soup, without
     /// reduction.
@@ -48,7 +39,7 @@ where
     }
 
     /// Produce one atomic reaction on the soup.
-    pub fn react(&mut self) -> Result<T, E> {
+    pub fn react(&mut self) -> Result<C::Product, C::Error> {
         let n_expr = self.expressions.len();
 
         // Remove two distinct expressions randomly from the soup
@@ -157,7 +148,7 @@ where
         log
     }
 
-    fn log_message_from_reaction(reaction: &Result<T, E>) -> String {
+    fn log_message_from_reaction(reaction: &Result<C::Product, C::Error>) -> String {
         match reaction {
             Ok(result) => format!("successful with {}", result),
             Err(message) => format!("failed because {}", message),
@@ -243,7 +234,7 @@ where
         n: usize,
         polling_interval: usize,
         log: bool,
-    ) -> Tape<P, C, G, T, E> {
+    ) -> Tape<P, C, G> {
         let mut history: Vec<Self> = Vec::new();
         for i in 0..n {
             let reaction = self.react();
@@ -256,7 +247,7 @@ where
             }
         }
 
-        Tape::<P, C, G, T, E> {
+        Tape::<P, C, G> {
             soup: self.clone(),
             history,
             polling_interval,

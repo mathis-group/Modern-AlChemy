@@ -16,25 +16,23 @@ pub struct ReactionRecord<P: Clone> {
     pub error: Option<String>,
 }
 
-pub struct Tape<P, C, G, T, E> {
-    pub soup: Soup<P, C, G, T, E>,
-    pub history: Vec<Soup<P, C, G, T, E>>,
+pub struct Tape<P, C, G> {
+    pub soup: Soup<P, C, G>,
+    pub history: Vec<Soup<P, C, G>>,
     pub polling_interval: usize,
 }
 
-impl<P, C, G, T, E> Tape<P, C, G, T, E>
+impl<P, C, G> Tape<P, C, G>
 where
     P: Particle + Display + Clone,
-    C: Collider<P, T, E> + Clone,
+    C: Collider<P> + Clone,
     G: Generator<P> + Clone,
-    T: Display + Clone + Residue<P>,
-    E: Display + Clone + std::error::Error,
 {
-    pub fn final_state(&self) -> &Soup<P, C, G, T, E> {
+    pub fn final_state(&self) -> &Soup<P, C, G> {
         &self.soup
     }
 
-    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G, T, E>> {
+    pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G>> {
         self.history.iter()
     }
 

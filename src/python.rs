@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use lambda_calculus::{parse, term::Notation::Classic};
 
 use crate::enums::Standardization as RustStandardization;
-use crate::config::config::{self, Config as RustConfig};
+use crate::config::config::{Config as RustConfig};
 use crate::config::{config_seed::ConfigSeed, reactor::Reactor as RustReactor};
 use crate::config::generators::{b_tree_gen::BTreeGen as BTreeGenConfig, fontana_gen::FontanaGen as FontanaGenConfig};
 use crate::lambda::generator::LambdaGenerator;
@@ -16,15 +16,14 @@ use crate::lambda::generators::{ b_tree_gen::BTreeGen as RustBTreeGen, fontana_g
 use crate::lambda::{
     collider::AlchemyCollider,
     particle::LambdaParticle,
-    result::{LambdaCollisionError, LambdaCollisionOk}
+    result::LambdaCollisionError
 };
 
 use crate::soupercollider::Soup as GenericSoup;
 use crate::utils::{decode_hex, encode_hex};
 
 // Concrete soup alias for the recursive lambda flavor
-type RustSoup =
-    GenericSoup<LambdaParticle, AlchemyCollider, LambdaGenerator, LambdaCollisionOk, LambdaCollisionError>;
+type RustSoup = GenericSoup<LambdaParticle, AlchemyCollider, LambdaGenerator>;
 
 // ============ Helper for Seed Parsing ============
 

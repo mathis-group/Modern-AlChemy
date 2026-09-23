@@ -1,5 +1,4 @@
 // Global Imports
-use std::marker::PhantomData;
 use lambda_calculus::Term;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -10,12 +9,10 @@ use crate::soupercollider::Soup;
 use crate::lambda::{
     particle::LambdaParticle, 
     collider::AlchemyCollider, 
-    generator::LambdaGenerator,
-    result::{LambdaCollisionOk, LambdaCollisionError}
+    generator::LambdaGenerator
 };
 
-pub type LambdaSoup =
-    Soup<LambdaParticle, AlchemyCollider, LambdaGenerator, LambdaCollisionOk, LambdaCollisionError>;
+pub type LambdaSoup = Soup<LambdaParticle, AlchemyCollider, LambdaGenerator>;
 
 impl LambdaSoup {
     /// Generate an empty soup with the following configuration options:
@@ -35,8 +32,6 @@ impl LambdaSoup {
             discard_parents: cfg.reactor_config.discard_parents,
             rng,
             n_collisions: 0,
-            t: PhantomData,
-            e: PhantomData,
         }
     }
 
