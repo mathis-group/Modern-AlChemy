@@ -75,6 +75,8 @@ fn main() -> std::io::Result<()> {
     
     // ------------- Recursive Experiment -------------
     // Iterate over each for n_generations
+    // TODO: Move this to it's own file for managing the recursive experiment workflow
+    // along with the wipeout and repopulate functions living in soup
     for gen in 0..config.recursive_config.n_generations {
         println!("Generation {gen}");
         // If we have a polling interval configured, push our recordings to the tape struct list

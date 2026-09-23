@@ -305,8 +305,8 @@ where
         self.perturb(particles);
     }
 
-    /// Adds an expression generic to it's Particle type.
-    /// Can accept any input that is a list of strings and implements the Particle trait.
+    /// Adds a list of String expressions to the soup, generic to Particle type
+    /// Can be used by any expression type which implements the Particle trait
    pub fn add_expressions(&mut self, sources: Vec<String>) -> Result<(), ParsingError> {
         for s in sources {
             self.expressions.push(P::parse(&s)?);
