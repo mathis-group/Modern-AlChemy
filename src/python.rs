@@ -14,7 +14,7 @@ use crate::lambda::generator::LambdaGenerator;
 use crate::lambda::generators::{ b_tree_gen::BTreeGen as RustBTreeGen, fontana_gen::FontanaGen as RustFontanaGen };
 
 use crate::lambda::{
-    collider::AlchemyCollider,
+    collider::LambdaCollider,
     particle::LambdaParticle,
     result::LambdaCollisionError
 };
@@ -23,7 +23,7 @@ use crate::soupercollider::Soup as GenericSoup;
 use crate::utils::{decode_hex, encode_hex};
 
 // Concrete soup alias for the recursive lambda flavor
-type RustSoup = GenericSoup<LambdaParticle, AlchemyCollider, LambdaGenerator>;
+type RustSoup = GenericSoup<LambdaParticle, LambdaCollider, LambdaGenerator>;
 
 // ============ Helper for Seed Parsing ============
 

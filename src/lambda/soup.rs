@@ -8,11 +8,11 @@ use crate::config::config::Config;
 use crate::soupercollider::Soup;
 use crate::lambda::{
     particle::LambdaParticle, 
-    collider::AlchemyCollider, 
+    collider::LambdaCollider, 
     generator::LambdaGenerator
 };
 
-pub type LambdaSoup = Soup<LambdaParticle, AlchemyCollider, LambdaGenerator>;
+pub type LambdaSoup = Soup<LambdaParticle, LambdaCollider, LambdaGenerator>;
 
 impl LambdaSoup {
     /// Generate an empty soup with the following configuration options:
@@ -26,7 +26,7 @@ impl LambdaSoup {
         let rng = ChaCha8Rng::from_seed(seed);
         Self {
             expressions: Vec::new(),
-            collider: AlchemyCollider::from_config(&cfg.reactor_config),
+            collider: LambdaCollider::from_config(&cfg.reactor_config),
             generator: LambdaGenerator::from_config(&cfg.generator_config),
             maintain_constant_population_size: cfg.reactor_config.maintain_constant_population_size,
             discard_parents: cfg.reactor_config.discard_parents,

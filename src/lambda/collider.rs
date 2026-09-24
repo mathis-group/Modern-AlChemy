@@ -9,7 +9,7 @@ use crate::lambda::result::{LambdaCollisionOk, LambdaCollisionError};
 use crate::lambda::utils::{has_two_args, uses_both_arguments, is_truthy, reduce_with_limit};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AlchemyCollider {
+pub struct LambdaCollider {
     rlimit: usize,
     slimit: usize,
     disallow_recursive: bool,
@@ -19,7 +19,7 @@ pub struct AlchemyCollider {
     discard_free_variable_expressions: bool,
 }
 
-impl AlchemyCollider {
+impl LambdaCollider {
     pub fn from_config(cfg: &Reactor) -> Self {
         Self {
             rlimit: cfg.reduction_cutoff,
@@ -126,7 +126,7 @@ impl AlchemyCollider {
     }
 }
 
-impl Collider<LambdaParticle> for AlchemyCollider {
+impl Collider<LambdaParticle> for LambdaCollider {
 
     type Product = LambdaCollisionOk;
     type Error   = LambdaCollisionError;
