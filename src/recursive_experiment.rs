@@ -1,7 +1,6 @@
 // Global Imports
 use std::fmt::Display;
 use std::iter::repeat_n;
-use rand::Rng;
 
 // Package Imports
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
@@ -59,19 +58,13 @@ where
     C: Collider<P> + Clone,
     G: Generator<P> + Clone,
 {
-    // Get the number of expressions we currently have
-    let n_expr = soup.expressions.len();
-
     // Calculate how many expressions will be culled based on the wipeout percent
     // TODO: Gotta be a better way to do this type conversion/casting/floor thing
     let n_wipeout = (soup.expressions.len() as f64 * ((wipeout_percent as f64) / 100.0)) as usize;
     
-    // Cull one expression for each wipeout we have
-    for execution_count in 0..n_wipeout {
-        let cull_index = soup.rng.gen_range(0..n_expr - execution_count);
-        let _removed_expression = soup.expressions.swap_remove(cull_index);
-        // println!("Removed Expression: {removed_expression}")
-    }
+    // Remove that many records from the soup
+    soup.cull(n_wipeout);
+
     n_wipeout
 }
 

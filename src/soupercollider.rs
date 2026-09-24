@@ -55,10 +55,7 @@ where
 
             // Remove additional expressions, if required.
             if self.maintain_constant_population_size {
-                for _ in 0..t.count() {
-                    let k = self.rng.gen_range(0..self.expressions.len());
-                    self.expressions.swap_remove(k);
-                }
+                self.cull(t.count());
             }
         }
 
@@ -90,10 +87,7 @@ where
                 self.perturb(products.iter().cloned());
 
                 if self.maintain_constant_population_size {
-                    for _ in 0..t.count() {
-                        let k = self.rng.gen_range(0..self.expressions.len());
-                        self.expressions.swap_remove(k);
-                    }
+                    self.cull(t.count());
                 }
 
                 ReactionRecord {
@@ -265,6 +259,16 @@ where
             self.expressions.push(P::parse(&s)?);
         }
         Ok(())
+    }
+
+    pub fn cull(&mut self, n: usize) {
+        let n_expr = self.expressions.len();
+
+        // Cull one expression for each wipeout we have
+        for execution_count in 0..n {
+            let cull_index = self.rng.gen_range(0..n_expr - execution_count);
+            let _removed_expression = self.expressions.swap_remove(cull_index);
+        }
     }
 
     /// Print out all expressions within the soup. Defaults to Church notation.

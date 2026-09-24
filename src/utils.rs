@@ -4,8 +4,6 @@ use std::{fmt, num::ParseIntError};
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
 
-use lambda_calculus::Term;
-
 // Package Imports
 use crate::experiments::{
     discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
