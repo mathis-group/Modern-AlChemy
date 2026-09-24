@@ -66,7 +66,7 @@ fn main() -> std::io::Result<()> {
     };
 
     // Perform the recursive experiment using the soup and config to produce a recording on the `tape_list`
-    let _tape_list = simulate_recursive_experiment(&mut soup, config)?;
+    let _tapes = simulate_recursive_experiment(&mut soup, config)?;
 
     Ok(())
 }
