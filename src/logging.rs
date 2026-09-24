@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 
 // Package Imports
 use crate::soupercollider::Soup;
-use crate::traits::{Particle, Collider, Generator, Residue};
+use crate::traits::{Particle, Collider, Generator};
 
 /// A single logged reaction event, capturing parents, products, and outcome.
 #[derive(Debug, Clone)]

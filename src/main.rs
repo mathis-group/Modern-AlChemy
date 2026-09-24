@@ -10,6 +10,7 @@ use alchemy::enums::ExpressionType;
 use alchemy::utils::{run_experiment, read_inputs};
 use alchemy::cli::Cli;
 use alchemy::lambda::soup::LambdaSoup;
+use alchemy::recursive_experiment::simulate_recursive_experiment;
 
 fn main() -> std::io::Result<()> {
     let mut cli = Cli::parse();
@@ -57,51 +58,15 @@ fn main() -> std::io::Result<()> {
     if cli.read_stdin {
         let expressions = read_inputs();
         // Parse the expressions and add to the soup
-        let parse_result = soup.add_expressions(expressions);
-
-        match parse_result {
-            Ok(v)  => v,
-            Err(e) => return Err(From::from(e)),
-        }
+        soup.add_expressions(expressions)?;
     } 
     // Or have the soup seeded with n expressions with the configured generator
     else {
         soup.seed_with_generator(config.sample_size);
     };
 
-    // Setup the tape list vector to store each generations history
-    let mut tape_list = Vec::new();
-
-    
-    // ------------- Recursive Experiment -------------
-    // Iterate over each for n_generations
-    // TODO: Move this to it's own file for managing the recursive experiment workflow
-    // along with the wipeout and repopulate functions living in soup
-    for gen in 0..config.recursive_config.n_generations {
-        println!("Generation {gen}");
-        // If we have a polling interval configured, push our recordings to the tape struct list
-        if let Some(polling_interval) = config.polling_interval {
-            tape_list.push(soup.simulate_and_record(config.run_limit, polling_interval, config.verbose_logging));
-        } 
-        // Otherwise simulate normally without recording and print the soup at the end
-        else {
-            soup.simulate_for(config.run_limit, config.verbose_logging);
-        }
-
-        // Recursive wipeout, remove `wipeout_percent` of expressions from the soup
-        let n_wipeout = soup.wipeout(config.recursive_config.wipeout_percent);
-        
-        // And repopulate with expressions of the specified refill_type
-        let repopulate_result = soup.repopulate(n_wipeout, &config.recursive_config);
-        // Return an error if we had an issue parsing the repopulation
-        match repopulate_result {
-            Ok(v)  => v,
-            Err(e) => return Err(From::from(e)),
-        }
-        
-        soup.print();
-        println!("");
-    }
+    // Perform the recursive experiment using the soup and config to produce a recording on the `tape_list`
+    let _tape_list = simulate_recursive_experiment(&mut soup, config)?;
 
     Ok(())
 }

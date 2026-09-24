@@ -13,6 +13,7 @@ pub mod traits;
 pub mod utils;
 pub mod cli;
 pub mod errors;
+pub mod recursive_experiment;
 
 // New Python wrapper module
 mod python;

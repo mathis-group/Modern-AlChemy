@@ -1,12 +1,10 @@
 // Global Imports
 use std::fmt::{Debug, Display};
-use std::iter::repeat_n;
-
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
-//Package Imports
-use crate::{config::recursive::{Recursive, RefillType}, traits::{Collider, Generator, Particle, Residue}};
+// Package Imports
+use crate::{traits::{Collider, Generator, Particle, Residue}};
 use crate::logging::{ReactionRecord, Tape};
 use crate::errors::ParsingError;
 
@@ -252,42 +250,6 @@ where
             history,
             polling_interval,
         }
-    }
-
-    /// Cull `wipeout_percent` of the population (rounded down) and replace with
-    /// `ConfigGenerator` generated or `custom_expression` expressions
-    // TODO: Move this to another file for recursive_experiments. Should not be a member of the soup.
-    pub fn wipeout(&mut self, wipeout_percent: usize) -> usize {
-        // Get the number of expressions we currently have
-        let n_expr = self.expressions.len();
-
-        // Calculate how many expressions will be culled based on the wipeout percent
-        // TODO: Gotta be a better way to do this type conversion/casting/floor thing
-        let n_wipeout = (self.expressions.len() as f64 * ((wipeout_percent as f64) / 100.0)) as usize;
-        
-        // Cull one expression for each wipeout we have
-        for execution_count in 0..n_wipeout {
-            let cull_index = self.rng.gen_range(0..n_expr - execution_count);
-            let removed_expression = self.expressions.swap_remove(cull_index);
-            println!("Removed Expression: {removed_expression}")
-        }
-        n_wipeout
-    }
-
-    /// Repopulate the soup based with n new particles either from the configured generator
-    /// or the provided `repopulation_expression`
-    // TODO: Move this to another file for recursive_experiments. Should not be a member of the soup.
-    pub fn repopulate(&mut self, n: usize, recursive_config: &Recursive) -> Result<(), ParsingError> {
-        match recursive_config.refill_type {
-            // Refill with the configured generator
-            RefillType::ConfigGenerator => self.seed_with_generator(n),
-            // Refill with the custom expression provided
-            RefillType::CustomExpression => {
-                let particle = P::parse(&recursive_config.repopulation_expression)?;
-                self.perturb(repeat_n(particle, n));
-            }
-        }
-        Ok(())
     }
 
     /// Generate and add n particles to an existing soup
