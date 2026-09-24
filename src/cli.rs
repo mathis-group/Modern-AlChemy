@@ -4,7 +4,7 @@ use std::fs::read_to_string;
 use clap::Parser;
 
 // Package Imports
-use crate::enums::Experiment;
+use crate::experiments::enums::Experiment;
 use crate::config::config;
 
 #[derive(Parser, Debug)]

@@ -12,3 +12,5 @@ pub mod distribution;
 pub mod kinetics;
 
 pub mod discovery;
+
+pub mod enums;

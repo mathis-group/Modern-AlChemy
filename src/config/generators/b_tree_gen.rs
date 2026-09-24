@@ -4,8 +4,6 @@ use serde::{Serialize, Deserialize};
 // Package Imports
 use crate::config::config_seed::ConfigSeed;
 use crate::config::generator::GenConfig;
-use crate::enums::Standardization;
-
 /// Configuration for the BTree generator
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
@@ -39,4 +37,11 @@ impl GenConfig for BTreeGen {
             seed: ConfigSeed(None),
         }
     }
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum Standardization {
+    Prefix,
+    Postfix,
+    None,
 }

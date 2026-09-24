@@ -10,7 +10,7 @@ use lambda_calculus::Term;
 use crate::experiments::{
     discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
 };
-use crate::enums::Experiment;
+use crate::experiments::enums::Experiment;
 use crate::errors::ParsingError;
 use crate::traits::Particle;
 
@@ -140,10 +140,6 @@ pub fn read_inputs() -> Vec<String> {
 /// Read expressions from stdin and parse them into the caller's particle type.
 pub fn read_particles<P: Particle>() -> Result<Vec<P>, ParsingError> {
     read_inputs().iter().map(|s| P::parse(s)).collect()
-}
-
-pub fn string_to_term(expression: &String) -> Term {
-    lambda_calculus::parse(expression, lambda_calculus::Classic).unwrap()
 }
 
 pub fn dump_series_to_file<T>(fname: &str, series: &[T], id: &[usize]) -> io::Result<()>

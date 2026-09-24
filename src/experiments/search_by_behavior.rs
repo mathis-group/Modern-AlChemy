@@ -20,7 +20,7 @@ use crate::lambda::{
     }
 };
 
-use crate::enums::Standardization;
+use crate::config::generators::b_tree_gen::Standardization;
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&Config {

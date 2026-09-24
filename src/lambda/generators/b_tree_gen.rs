@@ -8,7 +8,7 @@ use rand_chacha::ChaCha8Rng;
 // Package Imports
 use crate::config::generator::GenConfig;
 use crate::config::generators::b_tree_gen::BTreeGen as BTreeGenConfig;
-use crate::enums::Standardization;
+use crate::config::generators::b_tree_gen::Standardization;
 use crate::traits::Generator;
 use crate::lambda::particle::LambdaParticle;
 

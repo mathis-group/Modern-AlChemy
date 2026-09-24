@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
-use crate::enums::Standardization as RustStandardization;
+use crate::config::generators::b_tree_gen::Standardization as RustStandardization;
 use crate::config::config::{Config as RustConfig};
 use crate::config::{config_seed::ConfigSeed, reactor::Reactor as RustReactor};
 use crate::config::generators::{b_tree_gen::BTreeGen as BTreeGenConfig, fontana_gen::FontanaGen as FontanaGenConfig};

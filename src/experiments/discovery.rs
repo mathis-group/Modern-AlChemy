@@ -20,7 +20,7 @@ use crate::lambda::{
 };
 
 use crate::utils::dump_series_to_file;
-use crate::enums::Standardization;
+use crate::config::generators::b_tree_gen::Standardization;
 
 
 use super::{
