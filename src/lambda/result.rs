@@ -22,18 +22,6 @@ pub struct LambdaCollisionOk {
     pub right_size: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LambdaCollisionError {
-    ExceedsReductionLimit,
-    NotEnoughExpressions,
-    IsIdentity,
-    IsParent,
-    HasFreeVariables,
-    ExceedsDepthLimit,
-    RecursiveArgument,
-    BadArgument,
-}
-
 impl Residue<LambdaParticle> for LambdaCollisionOk {
     fn particles(&self) -> impl Iterator<Item = LambdaParticle> {
         self.results.iter().cloned()
@@ -48,6 +36,18 @@ impl fmt::Display for LambdaCollisionOk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt("no message", f)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LambdaCollisionError {
+    ExceedsReductionLimit,
+    NotEnoughExpressions,
+    IsIdentity,
+    IsParent,
+    HasFreeVariables,
+    ExceedsDepthLimit,
+    RecursiveArgument,
+    BadArgument,
 }
 
 impl fmt::Display for LambdaCollisionError {

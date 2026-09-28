@@ -5,3 +5,4 @@ pub mod particle;
 pub mod soup;
 pub mod utils;
 pub mod result;
+pub mod analysis;
