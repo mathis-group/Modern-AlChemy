@@ -12,13 +12,13 @@ use crate::config::{config_seed::ConfigSeed, reactor::Reactor as RustReactor};
 use crate::config::generators::{b_tree_gen::BTreeGen as BTreeGenConfig, fontana_gen::FontanaGen as FontanaGenConfig};
 use crate::lambda::generator::LambdaGenerator;
 use crate::lambda::generators::{ b_tree_gen::BTreeGen as RustBTreeGen, fontana_gen::FontanaGen as RustFontanaGen };
-
 use crate::lambda::{
     collider::LambdaCollider,
     particle::LambdaParticle,
     result::LambdaCollisionError
 };
 
+use crate::record::RecordingType;
 use crate::soupercollider::Soup as GenericSoup;
 use crate::utils::{decode_hex, encode_hex};
 
@@ -251,7 +251,7 @@ impl PySoup {
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
-        if let Some(tape) = self.inner.simulate(n, true, true, None) {
+        if let Some(tape) = self.inner.simulate(n, RecordingType::SuccessOnly, None) {
             return tape.reaction_record.len()
         };
         0
@@ -261,7 +261,7 @@ impl PySoup {
     /// objects capturing every reaction (parents + products).
     fn simulate_for_logged(&mut self, n: usize) -> Vec<PyReactionRecord> {
         let mut reaction_record = Vec::new();
-        if let Some(tape) = self.inner.simulate(n, true, false, None) {
+        if let Some(tape) = self.inner.simulate(n, RecordingType::All, None) {
             reaction_record
             .extend(
                 tape.reaction_record.into_iter()
@@ -282,7 +282,7 @@ impl PySoup {
     /// Uses less memory than `simulate_for_logged` for large n.
     fn simulate_for_logged_filtered(&mut self, n: usize) -> Vec<PyReactionRecord> {
         let mut reaction_record = Vec::new();
-        if let Some(tape) = self.inner.simulate(n, true, true, None) {
+        if let Some(tape) = self.inner.simulate(n, RecordingType::SuccessOnly, None) {
             reaction_record
             .extend(
                 tape.reaction_record.into_iter()

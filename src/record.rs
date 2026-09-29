@@ -5,6 +5,13 @@ use std::fmt::{Debug, Display};
 use crate::soupercollider::Soup;
 use crate::traits::{Particle, Collider, Generator};
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum RecordingType { 
+    None, 
+    All, 
+    SuccessOnly 
+}
+
 /// A single logged reaction event, capturing parents, products, and outcome.
 #[derive(Debug, Clone)]
 pub struct ReactionRecord<P: Clone> {

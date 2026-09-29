@@ -6,7 +6,7 @@ use std::iter::repeat_n;
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
 use crate::traits::{Particle, Collider, Generator};
 use crate::soupercollider::Soup;
-use crate::record::Tape;
+use crate::record::{Tape, RecordingType};
 use crate::errors::ParsingError;
 
 /// Simulate a recursive experiment on a Soup 
@@ -27,7 +27,7 @@ where
     for i in 0..config.recursive_config.n_generations {
         println!("Generation {i}");
         // Run the simulation and record it to the tape list if we have it configured to do so
-        if let Some(tape) = soup.simulate(config.run_limit, true, false, config.polling_interval) {
+        if let Some(tape) = soup.simulate(config.run_limit, RecordingType::All, config.polling_interval) {
             tape_list.push(tape);
         };
 

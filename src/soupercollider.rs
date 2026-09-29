@@ -5,7 +5,7 @@ use rand_chacha::ChaCha8Rng;
 
 // Package Imports
 use crate::{traits::{Collider, Generator, Particle, Residue}};
-use crate::record::{Tape, ReactionRecord};
+use crate::record::{Tape, ReactionRecord, RecordingType};
 use crate::errors::ParsingError;
 
 /// The principal AlChemy object. The `Soup` struct contains a set of
@@ -37,30 +37,30 @@ where
     pub fn simulate(
         &mut self, 
         n: usize, 
-        record: bool,
-        filter: bool,
+        recording: RecordingType,
         polling_interval: Option<usize>, 
     ) -> Option<Tape<P, C, G>> {
+        // Determine our recording options
+        let record = recording != RecordingType::None;
+
         // Setup our recording lists
         let mut history: Vec<Self> = Vec::new();
         let mut reaction_record: Vec<ReactionRecord<P>> = Vec::new();
 
         // Iterate for n simulation steps
         for i in 0..n {
-            let reaction = self.react(i, record)?;
-
-            // If we have recording enabled
-            if record {
+            // Perform the expression reaction
+            if let Some(reaction) = self.react(i, record){
                 // If we have filtering disabled or have a successful reaction
-                if !filter || reaction.success {
+                if recording == RecordingType::All || reaction.success {
                     // Log the reaction to the reaction_record list
                     reaction_record.push(reaction);
                 }
                 // If we have a polling interval, copy the entire soup every polling_interval steps
-                if let Some(interval) = polling_interval && (i % interval) == 0 {
+                if record && let Some(interval) = polling_interval && (i % interval) == 0 {
                     history.push(self.clone())
                 }
-            }
+            };
         }
 
         // If we weren't recording return None

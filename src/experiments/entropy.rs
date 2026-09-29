@@ -20,6 +20,7 @@ use crate::lambda::{
 use crate::lambda::soup::LambdaSoup;
 
 use crate::config::generators::b_tree_gen::Standardization;
+use crate::record::RecordingType;
 
 fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&Config {
@@ -57,7 +58,7 @@ async fn simulate_soup(
     soup.add_lambda_expressions(sample);
     
     let mut n_successes = 0;
-    if let Some(tape)= soup.simulate(run_length, true, true, None) {
+    if let Some(tape)= soup.simulate(run_length, RecordingType::SuccessOnly, None) {
         n_successes = tape.reaction_record.len();
     };
     let failure_rate = 1f32 - n_successes as f32 / run_length as f32;
@@ -135,7 +136,7 @@ pub fn sync_entropy_and_failures() {
         let sample = generator.generate_n(1000);
         let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
         soup.add_lambda_expressions(sample);
-        soup.simulate(100000, false, false, None);
+        soup.simulate(100000, RecordingType::None, None);
         let entropy = soup.population_entropy();
         println!("{}: {}", i, entropy);
     }
