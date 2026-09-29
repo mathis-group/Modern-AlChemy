@@ -12,6 +12,7 @@ use crate::errors::ParsingError;
 /// Simulate a recursive experiment on a Soup 
 pub fn simulate_recursive_experiment<P, C, G>( 
     soup: &mut Soup<P, C, G>, 
+    recording: RecordingType,
     config: Config
 ) -> Result<Vec<Tape<P, C, G>>, ParsingError> 
 where
@@ -27,7 +28,7 @@ where
     for i in 0..config.recursive_config.n_generations {
         println!("Generation {i}");
         // Run the simulation and record it to the tape list if we have it configured to do so
-        if let Some(tape) = soup.simulate(config.run_limit, RecordingType::All, config.polling_interval) {
+        if let Some(tape) = soup.simulate(config.run_limit, recording, config.polling_interval) {
             tape_list.push(tape);
         };
 

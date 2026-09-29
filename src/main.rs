@@ -11,6 +11,7 @@ use alchemy::utils::{run_experiment, read_inputs};
 use alchemy::cli::Cli;
 use alchemy::lambda::soup::LambdaSoup;
 use alchemy::recursive_experiment::simulate_recursive_experiment;
+use alchemy::record::RecordingType;
 
 fn main() -> std::io::Result<()> {
     let mut cli = Cli::parse();
@@ -66,7 +67,7 @@ fn main() -> std::io::Result<()> {
     };
 
     // Perform the recursive experiment using the soup and config to produce a recording on the `tape_list`
-    let _tapes = simulate_recursive_experiment(&mut soup, config)?;
+    let _tapes = simulate_recursive_experiment(&mut soup, RecordingType::All, config)?;
 
     Ok(())
 }
