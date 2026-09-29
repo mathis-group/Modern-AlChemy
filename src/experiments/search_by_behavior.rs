@@ -119,7 +119,7 @@ where
     F: Fn(&Term, &Term) -> bool,
 {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-    soup.add_lambda_expressions(sample);
+    soup.add_lambda_expressions(sample, false);
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
             let bests = s.k_most_frequent_exprs(10);

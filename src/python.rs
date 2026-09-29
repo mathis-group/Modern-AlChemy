@@ -247,7 +247,7 @@ impl PySoup {
         let terms = expressions
             .into_iter()
             .filter_map(|s| parse(&s, Classic).ok());
-        self.inner.add_lambda_expressions(terms);
+        self.inner.add_lambda_expressions(terms, false);
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {

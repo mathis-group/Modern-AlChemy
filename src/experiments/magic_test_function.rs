@@ -135,8 +135,8 @@ async fn add_magic_tests(
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize, usize)>) {
     let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
-    soup.add_lambda_expressions(sample);
-    soup.add_test_expressions(tests);
+    soup.add_lambda_expressions(sample, false);
+    soup.add_lambda_expressions(tests, true);
     let mut populations = Vec::new();
     for i in 0..10 {
         let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
@@ -156,9 +156,9 @@ async fn add_magic_tests(
         .map(|f| f())
         .cycle()
         .take(n_remaining);
-        soup.perturb_test_expressions(n_remaining, tests);
+        soup.perturb_lambda_expressions(n_remaining, tests, true);
         let skips = asymmetric_skip_sample();
-        soup.perturb_lambda_expressions(200, skips);
+        soup.perturb_lambda_expressions(200, skips, false);
 
         println!("Soup {id} {}0% done", i + 1);
     }
@@ -173,8 +173,8 @@ async fn succ_magic_tests(
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize, usize)>) {
     let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
-    soup.add_lambda_expressions(sample);
-    soup.add_test_expressions(tests);
+    soup.add_lambda_expressions(sample, false);
+    soup.add_lambda_expressions(tests, true);
     let mut populations = Vec::new();
     for i in 0..10 {
         let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
@@ -191,9 +191,9 @@ async fn succ_magic_tests(
             .map(|f| f())
             .cycle()
             .take(n_remaining);
-        soup.perturb_test_expressions(n_remaining, tests);
+        soup.perturb_lambda_expressions(n_remaining, tests, true);
         let skips = asymmetric_skip_sample();
-        soup.perturb_lambda_expressions(200, skips);
+        soup.perturb_lambda_expressions(200, skips, false);
 
         println!("Soup {id} {}0% done", i + 1);
     }

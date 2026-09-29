@@ -35,15 +35,7 @@ impl LambdaSoup {
         }
     }
 
-    pub fn add_lambda_expressions(&mut self, expressions: impl IntoIterator<Item = Term>) {
-        self.expressions
-            .extend(expressions.into_iter().map(|t| LambdaParticle {
-                expr: t,
-                recursive: false,
-            }))
-    }
-
-    pub fn perturb_lambda_expressions<I>(&mut self, nterms: usize, expressions: I)
+    pub fn perturb_lambda_expressions<I>(&mut self, nterms: usize, expressions: I, is_test: bool)
     where
         I: IntoIterator<Item = Term>,
         <I as IntoIterator>::IntoIter: Clone,
@@ -54,29 +46,15 @@ impl LambdaSoup {
                 self.expressions.swap_remove(k);
             }
         }
-        self.add_lambda_expressions(expressions.into_iter().cycle().take(nterms))
+        self.add_lambda_expressions(expressions.into_iter().cycle().take(nterms), is_test)
     }
 
-    pub fn add_test_expressions(&mut self, expressions: impl IntoIterator<Item = Term>) {
+    pub fn add_lambda_expressions(&mut self, expressions: impl IntoIterator<Item = Term>, is_test: bool) {
         self.expressions
             .extend(expressions.into_iter().map(|t| LambdaParticle {
                 expr: t,
-                recursive: true,
+                recursive: is_test,
             }))
-    }
-
-    pub fn perturb_test_expressions<I>(&mut self, nterms: usize, expressions: I)
-    where
-        I: IntoIterator<Item = Term>,
-        <I as IntoIterator>::IntoIter: Clone,
-    {
-        if self.maintain_constant_population_size {
-            for _ in 0..nterms {
-                let k = self.rng.gen_range(0..self.expressions.len());
-                self.expressions.swap_remove(k);
-            }
-        }
-        self.add_test_expressions(expressions.into_iter().cycle().take(nterms))
     }
 
     pub fn lambda_expressions(&self) -> impl Iterator<Item = &Term> {

@@ -55,7 +55,7 @@ async fn simulate_soup(
     run_length: usize,
 ) -> (LambdaSoup, usize, f32) {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-    soup.add_lambda_expressions(sample);
+    soup.add_lambda_expressions(sample, false);
     
     let mut n_successes = 0;
     if let Some(tape)= soup.simulate(run_length, RecordingType::SuccessOnly, None) {
@@ -75,7 +75,7 @@ async fn simulate_soup_and_produce_entropies(
     let bytes = id.to_le_bytes();
     seed[..bytes.len()].copy_from_slice(&bytes);
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-    soup.add_lambda_expressions(sample);
+    soup.add_lambda_expressions(sample, false);
     let data = soup.simulate_and_poll(run_length, polling_interval, false, |s: &LambdaSoup| {
         s.population_entropy()
     });
@@ -135,7 +135,7 @@ pub fn sync_entropy_and_failures() {
     for i in 0..100 {
         let sample = generator.generate_n(1000);
         let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-        soup.add_lambda_expressions(sample);
+        soup.add_lambda_expressions(sample, false);
         soup.simulate(100000, RecordingType::None, None);
         let entropy = soup.population_entropy();
         println!("{}: {}", i, entropy);

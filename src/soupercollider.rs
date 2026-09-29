@@ -100,7 +100,7 @@ where
             self.expressions.push(right.clone());
         }
 
-        // If we had a successful result, add the products of the reduction to the soup
+        // If we had a successful result, add the products of the reaction to the soup
         if let Ok(ref t) = result {
             products.extend(t.particles());
             self.perturb(products.iter().cloned());

@@ -65,9 +65,9 @@ where
     let sample_iter = sample.into_iter().cycle();
     let test_iter = tests.iter().cycle().map(|f| f());
 
-    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
-    soup.add_lambda_expressions(sample_iter.clone().take(n_samples));
-    soup.add_test_expressions(test_iter.clone().take(n_tests));
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix), false);
+    soup.add_lambda_expressions(sample_iter.clone().take(n_samples), false);
+    soup.add_lambda_expressions(test_iter.clone().take(n_tests), true);
 
     let populations = (0..params.perturbation_interval)
         .flat_map(|i| {
@@ -87,8 +87,8 @@ where
             );
 
             let n_remaining = n_tests - soup.expressions().filter(|e| e.is_recursive()).count();
-            soup.perturb_test_expressions(n_remaining, test_iter.clone().take(n_remaining));
-            soup.perturb_lambda_expressions(params.perturbation_size, sample_iter.clone());
+            soup.perturb_lambda_expressions(n_remaining, test_iter.clone().take(n_remaining), true);
+            soup.perturb_lambda_expressions(params.perturbation_size, sample_iter.clone(), false);
             println!("Soup {:?} {}0% done", params.id, i + 1);
 
             pops
@@ -109,8 +109,8 @@ pub(super) async fn general_run(
     let prefix_iter = prefix.iter().cycle();
     let sample_iter = sample.iter().cycle();
 
-    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
-    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples));
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix), false);
+    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples), false);
 
     let populations = (0..params.perturbation_interval)
         .flat_map(|i| {
