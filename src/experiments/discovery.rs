@@ -45,8 +45,8 @@ pub fn measure_initial_population() {
         let series = (0..1000)
             .map(|_| {
                 let random_seed = ConfigSeed::new(random::<[u8; 32]>());
-                let mut gen = experiment_gen(random_seed);
-                gen.generate_n(10000)
+                let mut generator = experiment_gen(random_seed);
+                generator.generate_n(10000)
                     .iter_mut()
                     .map(|mut t| {
                         let r = reduce_with_limit(&mut t, 1000, 8000);

@@ -130,12 +130,12 @@ where
 }
 
 pub fn look_for_xorset() {
-    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
+    let mut generator = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     let run_length = 10000000;
     let polling_interval = 1000;
     for i in 0..1000 {
-        let sample = gen.generate_n(10000);
+        let sample = generator.generate_n(10000);
         futures.push(spawn(test_and_search_for_function(
             sample.into_iter(),
             i,
@@ -159,12 +159,12 @@ pub fn look_for_xorset() {
 }
 
 pub fn look_for_not_xorset() {
-    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
+    let mut generator = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     let run_length = 10000000;
     let polling_interval = 1000;
     for i in 0..1000 {
-        let sample = gen.generate_n(10000);
+        let sample = generator.generate_n(10000);
         futures.push(spawn(test_and_search_for_function(
             sample.into_iter(),
             i,

@@ -6,7 +6,7 @@ use std::iter::repeat_n;
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
 use crate::traits::{Particle, Collider, Generator};
 use crate::soupercollider::Soup;
-use crate::logging::Tape;
+use crate::record::Tape;
 use crate::errors::ParsingError;
 
 /// Simulate a recursive experiment on a Soup 
@@ -24,16 +24,12 @@ where
     let mut tape_list = Vec::new();
 
     // Iterate over each for n_generations
-    for gen in 0..config.recursive_config.n_generations {
-        println!("Generation {gen}");
-        // If we have a polling interval configured, push our recordings to the tape struct list
-        if let Some(polling_interval) = config.polling_interval {
-            tape_list.push(soup.simulate_and_record(config.run_limit, polling_interval, config.verbose_logging));
-        } 
-        // Otherwise simulate normally without recording and print the soup at the end
-        else {
-            soup.simulate_for(config.run_limit, config.verbose_logging);
-        }
+    for i in 0..config.recursive_config.n_generations {
+        println!("Generation {i}");
+        // Run the simulation and record it to the tape list if we have it configured to do so
+        if let Some(tape) = soup.simulate(config.run_limit, true, false, config.polling_interval) {
+            tape_list.push(tape);
+        };
 
         // Recursive wipeout, remove `wipeout_percent` of expressions from the soup
         let n_wipeout = wipeout(soup, config.recursive_config.wipeout_percent);

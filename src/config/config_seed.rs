@@ -14,7 +14,7 @@ pub struct ConfigSeed(pub Option<[u8; 32]>);
 impl ConfigSeed {
     /// Get the seed item
     pub fn get(&self) -> [u8; 32] {
-        self.0.unwrap_or(thread_rng().gen())
+        self.0.unwrap_or(thread_rng().r#gen())
     }
 
     pub fn seed(&self) -> Option<[u8; 32]> {

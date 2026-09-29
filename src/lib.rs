@@ -7,7 +7,7 @@ pub mod experiments;
 pub mod enums;
 pub mod lambda;
 pub mod soupercollider;
-pub mod logging;
+pub mod record;
 pub mod traits;
 pub mod utils;
 pub mod cli;

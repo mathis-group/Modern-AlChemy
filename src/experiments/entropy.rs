@@ -55,7 +55,11 @@ async fn simulate_soup(
 ) -> (LambdaSoup, usize, f32) {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
     soup.add_lambda_expressions(sample);
-    let n_successes = soup.simulate_for(run_length, false);
+    
+    let mut n_successes = 0;
+    if let Some(tape)= soup.simulate(run_length, true, true, None) {
+        n_successes = tape.reaction_record.len();
+    };
     let failure_rate = 1f32 - n_successes as f32 / run_length as f32;
     (soup, id, failure_rate)
 }
@@ -78,13 +82,13 @@ async fn simulate_soup_and_produce_entropies(
 }
 
 pub fn entropy_time_series() {
-    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
+    let mut generator = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     let run_length = 10000000;
     let polling_interval = 1000;
     let polls = run_length / polling_interval;
     for i in 0..1000 {
-        let sample = gen.generate_n(10000);
+        let sample = generator.generate_n(10000);
         futures.push(spawn(simulate_soup_and_produce_entropies(
             sample.into_iter(),
             i,
@@ -108,10 +112,10 @@ pub fn entropy_time_series() {
 }
 
 pub fn entropy_and_failures() {
-    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
+    let mut generator = experiment_gen(ConfigSeed::new([0; 32]));
     let mut futures = FuturesUnordered::new();
     for i in 0..1000 {
-        let sample = gen.generate_n(10000);
+        let sample = generator.generate_n(10000);
         futures.push(spawn(simulate_soup(sample.into_iter(), i, 10000000)));
     }
 
@@ -125,13 +129,13 @@ pub fn entropy_and_failures() {
 }
 
 pub fn sync_entropy_and_failures() {
-    let mut gen = experiment_gen(ConfigSeed::new([0; 32]));
+    let mut generator = experiment_gen(ConfigSeed::new([0; 32]));
 
     for i in 0..100 {
-        let sample = gen.generate_n(1000);
+        let sample = generator.generate_n(1000);
         let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
         soup.add_lambda_expressions(sample);
-        soup.simulate_for(100000, false);
+        soup.simulate(100000, false, false, None);
         let entropy = soup.population_entropy();
         println!("{}: {}", i, entropy);
     }

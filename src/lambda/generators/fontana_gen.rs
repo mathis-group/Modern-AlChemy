@@ -125,7 +125,7 @@ impl FontanaGen {
         let next_app = p_app + self.app_incr;
 
         let (p_abs_eff, p_app_eff) = Self::clamp_probabilities(p_abs, p_app);
-        let coin: f32 = self.rng.gen();
+        let coin: f32 = self.rng.r#gen();
 
         if coin <= p_abs_eff {
             return Term::Abs(Box::new(self.rand_lambda(

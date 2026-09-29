@@ -41,7 +41,7 @@ fn parse_seed(seed_hex: Option<String>) -> PyResult<[u8; 32]> {
         }
         None => {
             let mut rng = rand::thread_rng();
-            Ok(rng.gen())
+            Ok(rng.r#gen())
         }
     }
 }
@@ -251,41 +251,52 @@ impl PySoup {
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
-        self.inner.simulate_for(n, log)
+        if let Some(tape) = self.inner.simulate(n, true, true, None) {
+            return tape.reaction_record.len()
+        };
+        0
     }
 
     /// Simulate for `n` collisions and return a list of ReactionRecord
     /// objects capturing every reaction (parents + products).
     fn simulate_for_logged(&mut self, n: usize) -> Vec<PyReactionRecord> {
-        self.inner
-            .simulate_for_logged(n)
-            .into_iter()
-            .map(|r| PyReactionRecord {
-                step: r.step,
-                left: r.left.to_string(),
-                right: r.right.to_string(),
-                products: r.products.iter().map(|p| p.to_string()).collect(),
-                success: r.success,
-                error: r.error,
-            })
-            .collect()
+        let mut reaction_record = Vec::new();
+        if let Some(tape) = self.inner.simulate(n, true, false, None) {
+            reaction_record
+            .extend(
+                tape.reaction_record.into_iter()
+                .map(|r| PyReactionRecord {
+                    step: r.step,
+                    left: r.left.to_string(),
+                    right: r.right.to_string(),
+                    products: r.products.iter().map(|p| p.to_string()).collect(),
+                    success: r.success,
+                    error: r.error,
+                })
+            )
+        }
+        reaction_record
     }
 
     /// Simulate for `n` collisions and return only successful reaction records.
     /// Uses less memory than `simulate_for_logged` for large n.
     fn simulate_for_logged_filtered(&mut self, n: usize) -> Vec<PyReactionRecord> {
-        self.inner
-            .simulate_for_logged_filtered(n)
-            .into_iter()
-            .map(|r| PyReactionRecord {
-                step: r.step,
-                left: r.left.to_string(),
-                right: r.right.to_string(),
-                products: r.products.iter().map(|p| p.to_string()).collect(),
-                success: r.success,
-                error: r.error,
-            })
-            .collect()
+        let mut reaction_record = Vec::new();
+        if let Some(tape) = self.inner.simulate(n, true, true, None) {
+            reaction_record
+            .extend(
+                tape.reaction_record.into_iter()
+                .map(|r| PyReactionRecord {
+                    step: r.step,
+                    left: r.left.to_string(),
+                    right: r.right.to_string(),
+                    products: r.products.iter().map(|p| p.to_string()).collect(),
+                    success: r.success,
+                    error: r.error,
+                })
+            )
+        }
+        reaction_record
     }
 
     fn len(&self) -> usize {

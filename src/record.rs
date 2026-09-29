@@ -16,10 +16,14 @@ pub struct ReactionRecord<P: Clone> {
     pub error: Option<String>,
 }
 
-pub struct Tape<P, C, G> {
-    pub soup: Soup<P, C, G>,
-    pub history: Vec<Soup<P, C, G>>,
-    pub polling_interval: usize,
+pub struct Tape<P, C, G> 
+where
+    P: Particle + Display + Clone,
+    C: Collider<P> + Clone,
+    G: Generator<P> + Clone,
+{
+    pub soup_history: Vec<Soup<P, C, G>>,
+    pub reaction_record: Vec<ReactionRecord<P>>
 }
 
 impl<P, C, G> Tape<P, C, G>
@@ -28,15 +32,11 @@ where
     C: Collider<P> + Clone,
     G: Generator<P> + Clone,
 {
-    pub fn final_state(&self) -> &Soup<P, C, G> {
-        &self.soup
+    pub fn final_state(&self) -> Option<&Soup<P, C, G>> {
+        self.history().last()
     }
 
     pub fn history(&self) -> impl Iterator<Item = &Soup<P, C, G>> {
-        self.history.iter()
-    }
-
-    pub fn polling_interval(&self) -> usize {
-        self.polling_interval
+        self.soup_history.iter()
     }
 }

@@ -5,7 +5,7 @@ use rand_chacha::ChaCha8Rng;
 
 // Package Imports
 use crate::{traits::{Collider, Generator, Particle, Residue}};
-use crate::logging::{ReactionRecord, Tape};
+use crate::record::{Tape, ReactionRecord};
 use crate::errors::ParsingError;
 
 /// The principal AlChemy object. The `Soup` struct contains a set of
@@ -30,220 +30,108 @@ where
     C: Collider<P> + Clone,
     G: Generator<P> + Clone
 {
-    /// Introduce all expressions in `expressions` into the soup, without
-    /// reduction.
-    pub fn perturb(&mut self, expressions: impl IntoIterator<Item = P>) {
-        self.expressions.extend(expressions)
+
+    /// Simulate the soup for `n` collisions. If `log` is set, then print
+    /// out a log message for each reaction. Returns the number of successful reactions
+    /// (the fraction of failed reactions).
+    pub fn simulate(
+        &mut self, 
+        n: usize, 
+        record: bool,
+        filter: bool,
+        polling_interval: Option<usize>, 
+    ) -> Option<Tape<P, C, G>> {
+        // Setup our recording lists
+        let mut history: Vec<Self> = Vec::new();
+        let mut reaction_record: Vec<ReactionRecord<P>> = Vec::new();
+
+        // Iterate for n simulation steps
+        for i in 0..n {
+            let reaction = self.react(i, record)?;
+
+            // If we have recording enabled
+            if record {
+                // If we have filtering disabled or have a successful reaction
+                if !filter || reaction.success {
+                    // Log the reaction to the reaction_record list
+                    reaction_record.push(reaction);
+                }
+                // If we have a polling interval, copy the entire soup every polling_interval steps
+                if let Some(interval) = polling_interval && (i % interval) == 0 {
+                    history.push(self.clone())
+                }
+            }
+        }
+
+        // If we weren't recording return None
+        if !record {
+            return None
+        }
+
+        // If we don't have a whole divisor between number of steps and our configured polling interval
+        // push the final value of the soup to the tape. If we did have a whole divisor, this would have been
+        // caught by the last loop of the polling interval check above.
+        if let Some(interval) = polling_interval && (n % interval) != 0 {
+            history.push(self.clone());
+        }
+
+        // Return the Tape with the soup snapshots and reaction_record
+        Some(Tape::<P, C, G> {
+            soup_history: history,
+            reaction_record
+        })
     }
 
     /// Produce one atomic reaction on the soup.
-    pub fn react(&mut self) -> Result<C::Product, C::Error> {
-        let n_expr = self.expressions.len();
+    pub fn react(&mut self, step: usize, record: bool) -> Option<ReactionRecord<P>> {
+        let n_expr = self.len();
+        let mut products: Vec<P> = Vec::new();
 
         // Remove two distinct expressions randomly from the soup
-        let i = self.rng.gen_range(0..n_expr);
-        let left = self.expressions.swap_remove(i);
-
-        let j = self.rng.gen_range(0..n_expr - 1);
-        let right = self.expressions.swap_remove(j);
+        let left = self.expressions.swap_remove(self.rng.gen_range(0..n_expr));
+        let right = self.expressions.swap_remove(self.rng.gen_range(0..n_expr - 1));
 
         // Add collision results to soup
         let result = self.collider.collide(left.clone(), right.clone());
 
-        if let Ok(ref t) = result {
-            self.perturb(t.particles());
+        // Add removed parents back into the soup, if necessary
+        if !self.discard_parents {
+            self.expressions.push(left.clone());
+            self.expressions.push(right.clone());
+        }
 
-            // Remove additional expressions, if required.
+        // If we had a successful result, add the products of the reduction to the soup
+        if let Ok(ref t) = result {
+            products.extend(t.particles());
+            self.perturb(products.iter().cloned());
+
+            // If we have set a constant population size, remove the
+            // number of added expressions
             if self.maintain_constant_population_size {
                 self.cull(t.count());
             }
         }
 
-        // Add removed parents back into the soup, if necessary
-        if !self.discard_parents {
-            self.expressions.push(left);
-            self.expressions.push(right);
+        // If logging is disabled return None
+        if !record {
+            return None;
         }
 
-        result.clone()
+        // Otherwise return the recorded result of the reaction
+        Some(ReactionRecord {
+            step,
+            left: left.clone(),
+            right: right.clone(),
+            products: if result.is_ok() { products } else { vec![] },
+            success: result.is_ok(),
+            error: if let Err(ref e) = result { Some(format!("{}", e)) } else { None },
+        })
     }
 
-    /// Produce one atomic reaction and return a full record of who
-    /// reacted with whom to produce what.
-    pub fn react_logged(&mut self, step: usize) -> ReactionRecord<P> {
-        let n_expr = self.expressions.len();
-
-        let i = self.rng.gen_range(0..n_expr);
-        let left = self.expressions.swap_remove(i);
-
-        let j = self.rng.gen_range(0..n_expr - 1);
-        let right = self.expressions.swap_remove(j);
-
-        let result = self.collider.collide(left.clone(), right.clone());
-
-        let record = match &result {
-            Ok(ref t) => {
-                let products: Vec<P> = t.particles().collect();
-                self.perturb(products.iter().cloned());
-
-                if self.maintain_constant_population_size {
-                    self.cull(t.count());
-                }
-
-                ReactionRecord {
-                    step,
-                    left: left.clone(),
-                    right: right.clone(),
-                    products,
-                    success: true,
-                    error: None,
-                }
-            }
-            Err(ref e) => ReactionRecord {
-                step,
-                left: left.clone(),
-                right: right.clone(),
-                products: vec![],
-                success: false,
-                error: Some(format!("{}", e)),
-            },
-        };
-
-        if !self.discard_parents {
-            self.expressions.push(left);
-            self.expressions.push(right);
-        }
-
-        record
-    }
-
-    /// Simulate for `n` collisions, returning a full reaction log.
-    /// Note: this allocates a Vec of n records. For very large n,
-    /// consider using `simulate_for_logged_filtered` instead.
-    pub fn simulate_for_logged(&mut self, n: usize) -> Vec<ReactionRecord<P>> {
-        let mut log = Vec::with_capacity(n);
-        for step in 0..n {
-            log.push(self.react_logged(step));
-        }
-        log
-    }
-
-    /// Simulate for `n` collisions, returning only successful reaction records.
-    pub fn simulate_for_logged_filtered(&mut self, n: usize) -> Vec<ReactionRecord<P>> {
-        let mut log = Vec::new();
-        for step in 0..n {
-            let record = self.react_logged(step);
-            if record.success {
-                log.push(record);
-            }
-        }
-        log
-    }
-
-    fn log_message_from_reaction(reaction: &Result<C::Product, C::Error>) -> String {
-        match reaction {
-            Ok(result) => format!("successful with {}", result),
-            Err(message) => format!("failed because {}", message),
-        }
-    }
-
-    /// Simulate the soup for `n` collisions. If `log` is set, then print
-    /// out a log message for each reaction. Returns the number of successful reactions
-    /// (the fraction of failed reactions).
-    pub fn simulate_for(&mut self, n: usize, log: bool) -> usize {
-        let mut n_successes = 0;
-        for i in 0..n {
-            let reaction = self.react();
-            if reaction.is_ok() {
-                n_successes += 1;
-            }
-
-            if log {
-                let message = Self::log_message_from_reaction(&reaction);
-                println!("reaction {:?} {}", i, message)
-            }
-        }
-        n_successes
-    }
-
-    pub fn simulate_and_poll<F, R>(
-        &mut self,
-        n: usize,
-        polling_interval: usize,
-        log: bool,
-        poller: F,
-    ) -> Vec<R>
-    where
-        F: Fn(&Self) -> R,
-    {
-        let mut data: Vec<R> = Vec::new();
-        for i in 0..n {
-            let reaction = self.react();
-            if (i % polling_interval) == 0 {
-                data.push(poller(self))
-            }
-            if log {
-                let message = Self::log_message_from_reaction(&reaction);
-                println!("reaction {:?} {}", i, message)
-            }
-        }
-        data
-    }
-
-    pub fn simulate_and_poll_with_killer<F, R>(
-        &mut self,
-        n: usize,
-        polling_interval: usize,
-        log: bool,
-        killpoller: F,
-    ) -> Vec<R>
-    where
-        F: Fn(&Self) -> (R, bool),
-    {
-        let mut data: Vec<R> = Vec::new();
-        for i in 0..n {
-            let reaction = self.react();
-            if (i % polling_interval) == 0 {
-                let (datum, should_kill) = killpoller(self);
-                data.push(datum);
-                if should_kill {
-                    return data;
-                };
-            }
-            if log {
-                let message = Self::log_message_from_reaction(&reaction);
-                println!("reaction {:?} {}", i, message)
-            }
-        }
-        data
-    }
-
-    /// Simulate the soup for `n` collisions, recording the state of the soup every
-    /// `polling_interval` reactions. If `log` is set, then print out a log message for each
-    /// reaction
-    pub fn simulate_and_record(
-        &mut self,
-        n: usize,
-        polling_interval: usize,
-        log: bool,
-    ) -> Tape<P, C, G> {
-        let mut history: Vec<Self> = Vec::new();
-        for i in 0..n {
-            let reaction = self.react();
-            if (i % polling_interval) == 0 {
-                history.push(self.clone())
-            }
-            if log {
-                let message = Self::log_message_from_reaction(&reaction);
-                println!("reaction {:?} {}", i, message)
-            }
-        }
-
-        Tape::<P, C, G> {
-            soup: self.clone(),
-            history,
-            polling_interval,
-        }
+    /// Introduce all expressions in `expressions` into the soup, without
+    /// reduction.
+    pub fn perturb(&mut self, expressions: impl IntoIterator<Item = P>) {
+        self.expressions.extend(expressions)
     }
 
     /// Generate and add n particles to an existing soup
@@ -261,6 +149,7 @@ where
         Ok(())
     }
 
+    /// Removes n random expressions from the soup
     pub fn cull(&mut self, n: usize) {
         let n_expr = self.expressions.len();
 
