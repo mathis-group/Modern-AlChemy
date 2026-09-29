@@ -1,7 +1,7 @@
 // Global Imports
 use serde::{Serialize, Deserialize};
 
-/// Configuration for the reactor
+/// Configuration for the recursive experiment
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Recursive {
@@ -12,7 +12,7 @@ pub struct Recursive {
     pub wipeout_percent: usize,
 
     /// The type of refill that should be performed after a wipeout
-    /// {config_generator: Generator, custom_expression: string}. Default: config_generator
+    /// {config_generator: ConfigGenerator/CustomExpression, custom_expression: string}. Default: ConfigGenerator
     pub refill_type: RefillType,
 
     /// The custom expression to be seeded in place of the wipeout 

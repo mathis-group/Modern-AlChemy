@@ -58,11 +58,6 @@ impl Cli {
     pub fn get_config(&mut self) -> std::io::Result<config::Config> {
         let mut config = 
         if let Some(filename) = &self.config_file {
-            println!("{filename}");
-            let cwd = env::current_dir()?;
-            // Print the directory path using .display()
-            println!("Current directory: {}", cwd.display());
-
             let contents = read_to_string(filename)?;
             config::Config::from_config_str(&contents)
         } else {

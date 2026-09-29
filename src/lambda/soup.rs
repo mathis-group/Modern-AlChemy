@@ -5,6 +5,7 @@ use rand_chacha::ChaCha8Rng;
 
 // Package Imports
 use crate::config::config::Config;
+use crate::config::reactor::Reactor;
 use crate::soupercollider::Soup;
 use crate::lambda::{
     particle::LambdaParticle, 
@@ -22,14 +23,21 @@ impl LambdaSoup {
 
     /// Generate an empty soup from a given `config` object.
     pub fn from_config(cfg: &Config) -> Self {
-        let seed = cfg.reactor_config.seed.get();
+        // `main` has already dispatched on `expression_type` to reach a lambda
+        // soup, so the reactor config must be the untyped lambda variant. This
+        // binding is irrefutable while `Reactor` has one variant; adding another
+        // makes it a compile error, which is where the decision about a mismatch
+        // between `expression_type` and `reactor_config` belongs.
+        let Reactor::UntypedLambda(reactor_cfg) = &cfg.reactor_config;
+
+        let seed = cfg.soup_config.seed.get();
         let rng = ChaCha8Rng::from_seed(seed);
         Self {
             expressions: Vec::new(),
-            collider: LambdaCollider::from_config(&cfg.reactor_config),
+            collider: LambdaCollider::from_config(reactor_cfg),
             generator: LambdaGenerator::from_config(&cfg.generator_config),
-            maintain_constant_population_size: cfg.reactor_config.maintain_constant_population_size,
-            discard_parents: cfg.reactor_config.discard_parents,
+            maintain_constant_population_size: cfg.soup_config.maintain_constant_population_size,
+            discard_parents: cfg.soup_config.discard_parents,
             rng,
             n_collisions: 0,
         }

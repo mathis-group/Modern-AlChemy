@@ -64,7 +64,7 @@ where
     n_wipeout
 }
 
-/// Repopulate the soup based with n new particles either from the configured generator
+/// Repopulate the soup with n new particles either from the configured generator
 /// or the provided `repopulation_expression`
 fn repopulate<P, C, G>(
     soup: &mut Soup<P, C, G>,

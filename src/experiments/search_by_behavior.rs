@@ -21,23 +21,8 @@ use crate::lambda::{
 };
 
 use crate::config::generators::b_tree_gen::Standardization;
+use crate::experiments::utils::experiment_soup;
 
-fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&Config {
-        reactor_config: Reactor {
-            rules: vec![String::from("\\x.\\y.x y")],
-            discard_copy_actions: false,
-            discard_identity: false,
-            discard_free_variable_expressions: true,
-            maintain_constant_population_size: true,
-            discard_parents: false,
-            reduction_cutoff: 8000,
-            size_cutoff: 1000,
-            seed,
-        },
-        ..Default::default()
-    })
-}
 
 fn experiment_gen(seed: ConfigSeed) -> BTreeGen {
     BTreeGen::from_config(&BTreeGenConfig {

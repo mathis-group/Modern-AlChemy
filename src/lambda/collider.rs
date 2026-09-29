@@ -2,7 +2,7 @@
 use lambda_calculus::{abs, app, Term, Var};
 
 // Package Imports
-use crate::config::reactor::Reactor;
+use crate::config::reactors::untyped_lambda::UntypedLambdaReactor;
 use crate::traits::Collider;
 use crate::lambda::particle::LambdaParticle;
 use crate::lambda::result::{LambdaCollisionOk, LambdaCollisionError};
@@ -20,7 +20,7 @@ pub struct LambdaCollider {
 }
 
 impl LambdaCollider {
-    pub fn from_config(cfg: &Reactor) -> Self {
+    pub fn from_config(cfg: &UntypedLambdaReactor) -> Self {
         Self {
             rlimit: cfg.reduction_cutoff,
             slimit: cfg.size_cutoff,

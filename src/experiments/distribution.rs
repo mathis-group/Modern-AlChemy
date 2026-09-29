@@ -8,29 +8,14 @@ use lambda_calculus::Term;
 use crate::config::{
     config::Config, 
     config_seed::ConfigSeed,
-    reactor::Reactor
+    reactors::untyped_lambda::UntypedLambdaReactor
 };
 
 use crate::lambda::{particle::LambdaParticle, soup::LambdaSoup};
 
 use crate::utils::read_particles;
+use crate::experiments::utils::experiment_soup;
 
-fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&Config {
-        reactor_config: Reactor {
-            rules: vec![String::from("\\x.\\y.x y")],
-            discard_copy_actions: false,
-            discard_identity: false,
-            discard_free_variable_expressions: true,
-            maintain_constant_population_size: true,
-            discard_parents: false,
-            reduction_cutoff: 8000,
-            size_cutoff: 1000,
-            seed,
-        },
-        ..Default::default()
-    })
-}
 
 pub fn one_sample_with_dist() {
     let run_length = 1000000;

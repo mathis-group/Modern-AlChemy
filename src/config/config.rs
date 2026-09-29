@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 // Package Imports
-use crate::config::{generator::Generator, reactor::Reactor, recursive::Recursive};
+use crate::config::{generator::Generator, reactor::Reactor, recursive::Recursive, soup::Soup};
 use crate::enums::ExpressionType;
 
 /// `Config` stores the global configuration of the program.
@@ -28,8 +28,12 @@ pub struct Config {
     /// Configuration options for the random expression generator.
     pub generator_config: Generator,
 
-    /// Configuration options for the lambda reactor.
+    /// Configuration options for the reactor, tagged by expression type.
     pub reactor_config: Reactor,
+
+    /// Configuration options for the soup's population and dilution flux.
+    /// Shared by every reactor variant, so it sits beside `reactor_config`.
+    pub soup_config: Soup,
 
     /// Configuration options for recursive experiments
     pub recursive_config: Recursive
@@ -51,6 +55,7 @@ impl Config {
         Config {
             expression_type: ExpressionType::UntypedLambda,
             reactor_config: Reactor::new(),
+            soup_config: Soup::new(),
             generator_config: Generator::new(),
             recursive_config: Recursive::new(),
             run_limit: 100000,
@@ -60,8 +65,17 @@ impl Config {
         }
     }
 
+    /// Override the reduction cutoff from the CLI.
+    ///
+    /// `reduction_cutoff` is a beta-reduction concept, so it only applies to
+    /// reactor variants that reduce. The match is exhaustive by construction:
+    /// adding a variant without that concept will stop this compiling, which is
+    /// where the decision about what `--reduction-cutoff` should mean for it
+    /// belongs.
     pub fn set_reduction_cutoff(&mut self, cutoff: usize) {
-        self.reactor_config.reduction_cutoff = cutoff;
+        match &mut self.reactor_config {
+            Reactor::UntypedLambda(r) => r.reduction_cutoff = cutoff,
+        }
     }
 
     pub fn set_run_limit(&mut self, limit: usize) {
