@@ -1,9 +1,16 @@
+// Global Imports
 use std::cmp::Ord;
 use std::{fmt, num::ParseIntError};
-
-use lambda_calculus::Term;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
+
+// Package Imports
+use crate::experiments::{
+    discovery, distribution, entropy, kinetics, magic_test_function, search_by_behavior,
+};
+use crate::experiments::enums::Experiment;
+use crate::errors::ParsingError;
+use crate::traits::Particle;
 
 // This was shamelessly stolen from
 // https://play.rust-lang.org/?version=stable&mode=debug&edition=2015&gist=e241493d100ecaadac3c99f37d0f766f
@@ -113,8 +120,8 @@ where
 impl<U, T> Eq for HeapObject<U, T> where U: Ord {}
 
 /// Read lambda expressions from stdin and return an iterator over them
-pub fn read_inputs() -> impl Iterator<Item = Term> {
-    let mut expression_strings = Vec::<String>::new();
+pub fn read_inputs() -> Vec<String> {
+    let mut expression_strings = Vec::new();
     let stdin = io::stdin();
     let reader = BufReader::new(stdin.lock());
 
@@ -125,11 +132,12 @@ pub fn read_inputs() -> impl Iterator<Item = Term> {
         }
     }
 
-    let expressions = expression_strings
-        .iter()
-        .map(|s| lambda_calculus::parse(s, lambda_calculus::Classic).unwrap())
-        .collect::<Vec<Term>>();
-    expressions.into_iter()
+    expression_strings
+}
+
+/// Read expressions from stdin and parse them into the caller's particle type.
+pub fn read_particles<P: Particle>() -> Result<Vec<P>, ParsingError> {
+    read_inputs().iter().map(|s| P::parse(s)).collect()
 }
 
 pub fn dump_series_to_file<T>(fname: &str, series: &[T], id: &[usize]) -> io::Result<()>
@@ -146,4 +154,62 @@ where
     }
     writeln!(file)?;
     Ok(())
+}
+
+/// Takes an experiment string from the CLI input and runs it
+pub fn run_experiment(experiment: Experiment) {
+    match experiment {
+        Experiment::EntropyAndFailures => entropy::entropy_and_failures(),
+        Experiment::SyncEntropyAndFailures => entropy::sync_entropy_and_failures(),
+        Experiment::EntropyTimeSeries => entropy::entropy_time_series(),
+
+        Experiment::XorsetSearch => search_by_behavior::look_for_xorset(),
+        Experiment::NotXorsetSearch => search_by_behavior::look_for_not_xorset(),
+
+        Experiment::DistributionTimeSeries => distribution::one_sample_with_dist(),
+
+        Experiment::AddSearchWithTest => magic_test_function::add_search_with_test(),
+        Experiment::SuccSearchWithTest => magic_test_function::succ_search_with_test(),
+        Experiment::AddSearchNoTest => magic_test_function::add_search_no_test(),
+
+        Experiment::SuccKinetics => kinetics::kinetic_succ_experiment(),
+
+        Experiment::MeasureInitialPopulation => discovery::measure_initial_population(),
+        Experiment::AddSccPopulationFromRandomInputs => {
+            discovery::add_scc_population_from_random_inputs()
+        }
+        Experiment::AddSccPopulationFromSkiInputs => {
+            discovery::add_scc_population_from_ski_inputs()
+        }
+        Experiment::AddSccPopulationFromSkipInputs => {
+            discovery::add_scc_population_from_skip_inputs()
+        }
+        Experiment::SccPopulationFromRandomInputsWithTests => {
+            discovery::scc_population_from_random_inputs_with_tests()
+        }
+        Experiment::AddPopulationFromRandomInputsWithTests => {
+            discovery::add_population_from_random_inputs_with_tests()
+        }
+        Experiment::AddPopulationFromRandomInputsWithAddSuccTests => {
+            discovery::add_population_from_random_inputs_with_add_succ_tests()
+        }
+        Experiment::SccPopulationFromSkiInputsWithTests => {
+            discovery::scc_population_from_ski_inputs_with_tests()
+        }
+        Experiment::AddPopulationFromSkiInputsWithTests => {
+            discovery::add_population_from_ski_inputs_with_tests()
+        }
+        Experiment::AddPopulationFromSkiInputsWithAddSuccTests => {
+            discovery::add_population_from_ski_inputs_with_add_succ_tests()
+        }
+        Experiment::AddtwoPopulationFromSkiInputsWithAddtwoTests => {
+            discovery::addtwo_population_from_ski_inputs_with_addtwo_tests()
+        }
+        Experiment::AddPopulationFromSkiInputsWithBatchedAddSuccTests => {
+            discovery::add_population_from_ski_inputs_with_batchedadd_succ_tests()
+        }
+        Experiment::AddPopulationFromSkipInputsWithAddSuccTests => {
+            discovery::add_population_from_skip_inputs_with_add_succ_tests()
+        }
+    }
 }

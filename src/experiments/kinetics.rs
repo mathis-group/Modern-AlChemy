@@ -6,27 +6,18 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use lambda_calculus::{data::num::church::succ, Term};
 use rand::random;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::LambdaSoup,
-    utils::dump_series_to_file,
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor
 };
 
-use super::magic_test_function::{asymmetric_skip_sample, test_succ};
+use crate::lambda::soup::LambdaSoup;
 
-fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Reactor {
-        rules: vec![String::from("\\x.\\y.x y")],
-        discard_copy_actions: false,
-        discard_identity: false,
-        discard_free_variable_expressions: true,
-        maintain_constant_population_size: true,
-        discard_parents: false,
-        reduction_cutoff: 8000,
-        size_cutoff: 1000,
-        seed,
-    })
-}
+use crate::utils::{read_inputs, dump_series_to_file};
+use super::magic_test_function::{asymmetric_skip_sample, test_succ};
+use crate::experiments::utils::experiment_soup;
+
 
 pub(super) struct RunParams {
     pub id: Vec<usize>,
@@ -59,9 +50,9 @@ where
     let sample_iter = sample.into_iter().cycle();
     let test_iter = tests.iter().cycle().map(|f| f());
 
-    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
-    soup.add_lambda_expressions(sample_iter.clone().take(n_samples));
-    soup.add_test_expressions(test_iter.clone().take(n_tests));
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix), false);
+    soup.add_lambda_expressions(sample_iter.clone().take(n_samples), false);
+    soup.add_lambda_expressions(test_iter.clone().take(n_tests), true);
 
     let populations = (0..params.perturbation_interval)
         .flat_map(|i| {
@@ -81,8 +72,8 @@ where
             );
 
             let n_remaining = n_tests - soup.expressions().filter(|e| e.is_recursive()).count();
-            soup.perturb_test_expressions(n_remaining, test_iter.clone().take(n_remaining));
-            soup.perturb_lambda_expressions(params.perturbation_size, sample_iter.clone());
+            soup.perturb_lambda_expressions(n_remaining, test_iter.clone().take(n_remaining), true);
+            soup.perturb_lambda_expressions(params.perturbation_size, sample_iter.clone(), false);
             println!("Soup {:?} {}0% done", params.id, i + 1);
 
             pops
@@ -103,8 +94,8 @@ pub(super) async fn general_run(
     let prefix_iter = prefix.iter().cycle();
     let sample_iter = sample.iter().cycle();
 
-    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix));
-    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples));
+    soup.add_lambda_expressions(prefix_iter.cloned().take(n_prefix), false);
+    soup.add_lambda_expressions(sample_iter.cloned().take(n_samples), false);
 
     let populations = (0..params.perturbation_interval)
         .flat_map(|i| {

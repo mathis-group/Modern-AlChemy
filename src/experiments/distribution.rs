@@ -5,34 +5,26 @@ use std::collections::HashMap;
 
 use lambda_calculus::Term;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::LambdaSoup,
-    utils::read_inputs,
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactors::untyped_lambda::UntypedLambdaReactor
 };
 
-fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Reactor {
-        rules: vec![String::from("\\x.\\y.x y")],
-        discard_copy_actions: false,
-        discard_identity: false,
-        discard_free_variable_expressions: true,
-        maintain_constant_population_size: true,
-        discard_parents: false,
-        reduction_cutoff: 8000,
-        size_cutoff: 1000,
-        seed,
-    })
-}
+use crate::lambda::{particle::LambdaParticle, soup::LambdaSoup};
+
+use crate::utils::read_particles;
+use crate::experiments::utils::experiment_soup;
+
 
 pub fn one_sample_with_dist() {
     let run_length = 1000000;
     let polling_interval = 1000;
     let polls = run_length / polling_interval;
-    let sample = read_inputs().collect::<Vec<Term>>();
+    let sample: Vec<LambdaParticle> = read_particles().expect("invalid expression on stdin");    
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
 
-    soup.add_lambda_expressions(sample.into_iter().cycle().take(10000));
+    soup.perturb(sample.into_iter().cycle().take(10000));
     let counts = soup.simulate_and_poll(run_length, polling_interval, false, |s| {
         s.expression_counts()
     });

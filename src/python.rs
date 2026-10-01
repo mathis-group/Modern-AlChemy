@@ -6,19 +6,24 @@ use serde::{Deserialize, Serialize};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
-use crate::config::{self, ConfigSeed, Reactor as RustReactor};
-use crate::generators::{
-    BTreeGen as RustBTreeGen, FontanaGen as RustFontanaGen, Standardization as RustStandardization,
+use crate::config::generators::b_tree_gen::Standardization as RustStandardization;
+use crate::config::config::{Config as RustConfig};
+use crate::config::{config_seed::ConfigSeed, reactor::Reactor as RustReactor};
+use crate::config::generators::{b_tree_gen::BTreeGen as BTreeGenConfig, fontana_gen::FontanaGen as FontanaGenConfig};
+use crate::lambda::generator::LambdaGenerator;
+use crate::lambda::generators::{ b_tree_gen::BTreeGen as RustBTreeGen, fontana_gen::FontanaGen as RustFontanaGen };
+use crate::lambda::{
+    collider::LambdaCollider,
+    particle::LambdaParticle,
+    result::LambdaCollisionError
 };
-use crate::lambda::recursive::{
-    AlchemyCollider, LambdaCollisionError, LambdaCollisionOk, LambdaParticle,
-};
-use crate::supercollider::Soup as GenericSoup;
+
+use crate::record::RecordingType;
+use crate::soupercollider::Soup as GenericSoup;
 use crate::utils::{decode_hex, encode_hex};
 
 // Concrete soup alias for the recursive lambda flavor
-type RustSoup =
-    GenericSoup<LambdaParticle, AlchemyCollider, LambdaCollisionOk, LambdaCollisionError>;
+type RustSoup = GenericSoup<LambdaParticle, LambdaCollider, LambdaGenerator>;
 
 // ============ Helper for Seed Parsing ============
 
@@ -36,7 +41,7 @@ fn parse_seed(seed_hex: Option<String>) -> PyResult<[u8; 32]> {
         }
         None => {
             let mut rng = rand::thread_rng();
-            Ok(rng.gen())
+            Ok(rng.r#gen())
         }
     }
 }
@@ -139,6 +144,33 @@ impl PyReactionRecord {
     }
 }
 
+
+// ============ Config wrapper ============
+
+#[pyclass]
+pub struct PyConfig {
+    pub(crate) inner: RustConfig,
+}
+
+#[pymethods]
+impl PyConfig {
+    #[new]
+    fn new() -> Self {
+        PyConfig { inner: RustConfig::new() }
+    }
+
+    /// Same JSON the CLI reads.
+    #[staticmethod]
+    fn from_json(s: &str) -> Self {
+        PyConfig { inner: RustConfig::from_config_str(s) }
+    }
+
+    fn to_json(&self) -> String {
+        self.inner.to_config_str()
+    }
+}
+
+
 // ============ Reactor wrapper ============
 
 #[pyclass]
@@ -205,7 +237,7 @@ impl PySoup {
     }
 
     #[staticmethod]
-    fn from_config(cfg: &PyReactor) -> Self {
+    fn from_config(cfg: &PyConfig) -> Self {
         PySoup {
             inner: RustSoup::from_config(&cfg.inner),
         }
@@ -215,45 +247,56 @@ impl PySoup {
         let terms = expressions
             .into_iter()
             .filter_map(|s| parse(&s, Classic).ok());
-        self.inner.add_lambda_expressions(terms);
+        self.inner.add_lambda_expressions(terms, false);
     }
 
     fn simulate_for(&mut self, n: usize, log: bool) -> usize {
-        self.inner.simulate_for(n, log)
+        if let Some(tape) = self.inner.simulate(n, RecordingType::SuccessOnly, None) {
+            return tape.reaction_record.len()
+        };
+        0
     }
 
     /// Simulate for `n` collisions and return a list of ReactionRecord
     /// objects capturing every reaction (parents + products).
     fn simulate_for_logged(&mut self, n: usize) -> Vec<PyReactionRecord> {
-        self.inner
-            .simulate_for_logged(n)
-            .into_iter()
-            .map(|r| PyReactionRecord {
-                step: r.step,
-                left: r.left.to_string(),
-                right: r.right.to_string(),
-                products: r.products.iter().map(|p| p.to_string()).collect(),
-                success: r.success,
-                error: r.error,
-            })
-            .collect()
+        let mut reaction_record = Vec::new();
+        if let Some(tape) = self.inner.simulate(n, RecordingType::All, None) {
+            reaction_record
+            .extend(
+                tape.reaction_record.into_iter()
+                .map(|r| PyReactionRecord {
+                    step: r.step,
+                    left: r.left.to_string(),
+                    right: r.right.to_string(),
+                    products: r.products.iter().map(|p| p.to_string()).collect(),
+                    success: r.success,
+                    error: r.error,
+                })
+            )
+        }
+        reaction_record
     }
 
     /// Simulate for `n` collisions and return only successful reaction records.
     /// Uses less memory than `simulate_for_logged` for large n.
     fn simulate_for_logged_filtered(&mut self, n: usize) -> Vec<PyReactionRecord> {
-        self.inner
-            .simulate_for_logged_filtered(n)
-            .into_iter()
-            .map(|r| PyReactionRecord {
-                step: r.step,
-                left: r.left.to_string(),
-                right: r.right.to_string(),
-                products: r.products.iter().map(|p| p.to_string()).collect(),
-                success: r.success,
-                error: r.error,
-            })
-            .collect()
+        let mut reaction_record = Vec::new();
+        if let Some(tape) = self.inner.simulate(n, RecordingType::SuccessOnly, None) {
+            reaction_record
+            .extend(
+                tape.reaction_record.into_iter()
+                .map(|r| PyReactionRecord {
+                    step: r.step,
+                    left: r.left.to_string(),
+                    right: r.right.to_string(),
+                    products: r.products.iter().map(|p| p.to_string()).collect(),
+                    success: r.success,
+                    error: r.error,
+                })
+            )
+        }
+        reaction_record
     }
 
     fn len(&self) -> usize {
@@ -315,7 +358,7 @@ impl PyBTreeGen {
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
 
-        let cfg = config::BTreeGen {
+        let cfg = BTreeGenConfig {
             size,
             freevar_generation_probability,
             n_max_free_vars: max_free_vars,
@@ -369,7 +412,7 @@ impl PyFontanaGen {
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
 
-        let cfg = config::FontanaGen {
+        let cfg = FontanaGenConfig {
             abstraction_prob_range: abs_range,
             application_prob_range: app_range,
             min_depth,
@@ -422,6 +465,7 @@ fn encode_hex_py(bytes: Vec<u8>) -> String {
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySoup>()?;
+    m.add_class::<PyConfig>()?;
     m.add_class::<PyReactor>()?;
     m.add_class::<PyReactionError>()?;
     m.add_class::<PyReactionRecord>()?;

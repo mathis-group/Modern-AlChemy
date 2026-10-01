@@ -9,12 +9,19 @@ use lambda_calculus::{
 };
 use rand::random;
 
-use crate::{
-    config::{self, ConfigSeed},
-    generators::BTreeGen,
-    lambda::recursive::reduce_with_limit,
-    utils::dump_series_to_file,
+use crate::config::{
+    generators::b_tree_gen::BTreeGen as BTreeGenConfig,
+    config_seed::ConfigSeed
 };
+
+use crate::lambda::{
+    generators::b_tree_gen::BTreeGen,
+    utils::reduce_with_limit
+};
+
+use crate::utils::dump_series_to_file;
+use crate::config::generators::b_tree_gen::Standardization;
+
 
 use super::{
     kinetics::{general_run, general_test_run, RunParams},
@@ -24,10 +31,10 @@ use super::{
 };
 
 fn experiment_gen(seed: ConfigSeed) -> BTreeGen {
-    BTreeGen::from_config(&config::BTreeGen {
+    BTreeGen::from_config(&BTreeGenConfig {
         size: 20,
         freevar_generation_probability: 0.2,
-        standardization: crate::generators::Standardization::Prefix,
+        standardization: Standardization::Prefix,
         n_max_free_vars: 6,
         seed,
     })
@@ -38,8 +45,8 @@ pub fn measure_initial_population() {
         let series = (0..1000)
             .map(|_| {
                 let random_seed = ConfigSeed::new(random::<[u8; 32]>());
-                let mut gen = experiment_gen(random_seed);
-                gen.generate_n(10000)
+                let mut generator = experiment_gen(random_seed);
+                generator.generate_n(10000)
                     .iter_mut()
                     .map(|mut t| {
                         let r = reduce_with_limit(&mut t, 1000, 8000);

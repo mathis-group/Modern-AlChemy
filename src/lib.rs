@@ -2,13 +2,17 @@
 use pyo3::prelude::*;
 
 // Re-export your Rust modules for the CLI and for external users
-pub mod analysis;
 pub mod config;
 pub mod experiments;
-pub mod generators;
+pub mod enums;
 pub mod lambda;
-pub mod supercollider;
+pub mod soupercollider;
+pub mod record;
+pub mod traits;
 pub mod utils;
+pub mod cli;
+pub mod errors;
+pub mod recursive_experiment;
 
 // New Python wrapper module
 mod python;

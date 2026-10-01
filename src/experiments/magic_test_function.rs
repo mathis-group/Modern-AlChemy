@@ -15,25 +15,26 @@ use lambda_calculus::{
 };
 use rand::random;
 
-use crate::{
-    config::{self, ConfigSeed},
-    lambda::recursive::{has_two_args, is_truthy, uses_both_arguments, LambdaSoup},
-    utils::{dump_series_to_file, read_inputs},
+use crate::config::{
+    config::Config, 
+    config_seed::ConfigSeed,
+    reactor::Reactor
 };
 
-fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
-    LambdaSoup::from_config(&config::Reactor {
-        rules: vec![String::from("\\x.\\y.x y")],
-        discard_copy_actions: false,
-        discard_identity: false,
-        discard_free_variable_expressions: true,
-        maintain_constant_population_size: true,
-        discard_parents: false,
-        reduction_cutoff: 8000,
-        size_cutoff: 1000,
-        seed,
-    })
-}
+use crate::lambda::{
+    particle::LambdaParticle,
+    soup::LambdaSoup,
+    generators::b_tree_gen::BTreeGen,
+    utils::{
+        has_two_args,
+        is_truthy,
+        uses_both_arguments
+    }
+};
+
+use crate::utils::{dump_series_to_file, read_particles};
+use crate::experiments::utils::experiment_soup;
+
 
 pub fn coadd() -> Term {
     abs!(2, app!(Var(2), succ(), Var(1)))
@@ -119,8 +120,8 @@ async fn add_magic_tests(
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize, usize)>) {
     let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
-    soup.add_lambda_expressions(sample);
-    soup.add_test_expressions(tests);
+    soup.add_lambda_expressions(sample, false);
+    soup.add_lambda_expressions(tests, true);
     let mut populations = Vec::new();
     for i in 0..10 {
         let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
@@ -140,9 +141,9 @@ async fn add_magic_tests(
         .map(|f| f())
         .cycle()
         .take(n_remaining);
-        soup.perturb_test_expressions(n_remaining, tests);
+        soup.perturb_lambda_expressions(n_remaining, tests, true);
         let skips = asymmetric_skip_sample();
-        soup.perturb_lambda_expressions(200, skips);
+        soup.perturb_lambda_expressions(200, skips, false);
 
         println!("Soup {id} {}0% done", i + 1);
     }
@@ -157,8 +158,8 @@ async fn succ_magic_tests(
     polling_interval: usize,
 ) -> (usize, Vec<(usize, usize, usize)>) {
     let mut soup = experiment_soup(ConfigSeed::new([id as u8; 32]));
-    soup.add_lambda_expressions(sample);
-    soup.add_test_expressions(tests);
+    soup.add_lambda_expressions(sample, false);
+    soup.add_lambda_expressions(tests, true);
     let mut populations = Vec::new();
     for i in 0..10 {
         let pops = soup.simulate_and_poll(run_length / 10, polling_interval, false, |s| {
@@ -175,9 +176,9 @@ async fn succ_magic_tests(
             .map(|f| f())
             .cycle()
             .take(n_remaining);
-        soup.perturb_test_expressions(n_remaining, tests);
+        soup.perturb_lambda_expressions(n_remaining, tests, true);
         let skips = asymmetric_skip_sample();
-        soup.perturb_lambda_expressions(200, skips);
+        soup.perturb_lambda_expressions(200, skips, false);
 
         println!("Soup {id} {}0% done", i + 1);
     }
@@ -185,13 +186,13 @@ async fn succ_magic_tests(
 }
 
 async fn simulate_additive_murder(
-    sample: impl Iterator<Item = Term>,
+    sample: impl Iterator<Item = LambdaParticle>,
     id: usize,
     run_length: usize,
     polling_interval: usize,
 ) -> (usize, Vec<usize>) {
     let mut soup = experiment_soup(ConfigSeed::new([0; 32]));
-    soup.add_lambda_expressions(sample);
+    soup.perturb(sample); 
     let check_series =
         soup.simulate_and_poll_with_killer(run_length, polling_interval, false, |s| {
             (
@@ -207,7 +208,7 @@ pub fn add_search_no_test() {
     let mut futures = FuturesUnordered::new();
     let run_length = 1000000;
     let polling_interval = 1000;
-    let sample = read_inputs().collect::<Vec<Term>>();
+    let sample: Vec<LambdaParticle> = read_particles().expect("invalid expression on stdin");
     for i in 0..1000 {
         futures.push(spawn(simulate_additive_murder(
             sample.clone().into_iter().cycle().take(10000),
