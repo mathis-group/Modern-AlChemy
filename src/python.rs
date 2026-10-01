@@ -146,13 +146,24 @@ pub struct PyReactor {
     pub(crate) inner: RustReactor,
 }
 
+// Reactor config with an optional hex seed. With no seed, the reactor picks
+// a random one, so collisions are not reproducible.
+fn reactor_with_seed(seed: Option<String>) -> PyResult<RustReactor> {
+    let mut cfg = RustReactor::new();
+    if seed.is_some() {
+        cfg.seed = ConfigSeed::new(parse_seed(seed)?);
+    }
+    Ok(cfg)
+}
+
 #[pymethods]
 impl PyReactor {
     #[new]
-    fn new() -> Self {
-        PyReactor {
-            inner: RustReactor::new(),
-        }
+    #[pyo3(signature = (seed=None))]
+    fn new(seed: Option<String>) -> PyResult<Self> {
+        Ok(PyReactor {
+            inner: reactor_with_seed(seed)?,
+        })
     }
 }
 
@@ -198,10 +209,11 @@ pub struct PySoup {
 #[pymethods]
 impl PySoup {
     #[new]
-    fn new() -> Self {
-        PySoup {
-            inner: RustSoup::new(),
-        }
+    #[pyo3(signature = (seed=None))]
+    fn new(seed: Option<String>) -> PyResult<Self> {
+        Ok(PySoup {
+            inner: RustSoup::from_config(&reactor_with_seed(seed)?),
+        })
     }
 
     #[staticmethod]
