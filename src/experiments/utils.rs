@@ -8,7 +8,9 @@ use crate::traits::{Particle, Collider, Generator};
 use crate::config::{
     config::Config,
     config_seed::ConfigSeed,
-    reactor::Reactor,
+    expression::Expression,
+    expressions::untyped_lambda::UntypedLambdaExpression,
+    generator::Generator as GeneratorConfig,
     reactors::untyped_lambda::UntypedLambdaReactor,
     soup::Soup as SoupConfig,
 };
@@ -24,13 +26,16 @@ use crate::lambda::soup::LambdaSoup;
 /// in `soup_config`, not in the reactor. Generators carry their own seed.
 pub fn experiment_soup(seed: ConfigSeed) -> LambdaSoup {
     LambdaSoup::from_config(&Config {
-        reactor_config: Reactor::UntypedLambda(UntypedLambdaReactor {
-            rules: vec![String::from("\\x.\\y.x y")],
-            discard_copy_actions: false,
-            discard_identity: false,
-            discard_free_variable_expressions: true,
-            reduction_cutoff: 8000,
-            size_cutoff: 1000,
+        expression: Expression::UntypedLambda(UntypedLambdaExpression {
+            generator: GeneratorConfig::new(),
+            reactor: UntypedLambdaReactor {
+                rules: vec![String::from("\\x.\\y.x y")],
+                discard_copy_actions: false,
+                discard_identity: false,
+                discard_free_variable_expressions: true,
+                reduction_cutoff: 8000,
+                size_cutoff: 1000,
+            },
         }),
         soup_config: SoupConfig {
             discard_parents: false,

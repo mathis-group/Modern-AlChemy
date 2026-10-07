@@ -1,30 +1,31 @@
 {
-  "expression_type": "UntypedLambda",
+  "expression": {
+    "UntypedLambda": {
+      "generator": {
+        "BTree": {
+          "seed": null,
+          "size": 20,
+          "freevar_generation_probability": 0.2,
+          "n_max_free_vars": 6,
+          "standardization": "Postfix"
+        }
+      },
+      "reactor": {
+        "rules": [
+          "\\x.\\y.x y"
+        ],
+        "discard_copy_actions": true,
+        "discard_identity": true,
+        "discard_free_variable_expressions": true,
+        "reduction_cutoff": 500,
+        "size_cutoff": 1000
+      }
+    }
+  },
   "run_limit": 100000,
   "sample_size": 1000,
   "polling_interval": null,
   "verbose_logging": false,
-  "generator_config": {
-    "BTree": {
-      "seed": null,
-      "size": 20,
-      "freevar_generation_probability": 0.2,
-      "n_max_free_vars": 6,
-      "standardization": "Postfix"
-    }
-  },
-  "reactor_config": {
-    "UntypedLambda": {
-      "rules": [
-        "\\x.\\y.x y"
-      ],
-      "discard_copy_actions": true,
-      "discard_identity": true,
-      "discard_free_variable_expressions": true,
-      "reduction_cutoff": 500,
-      "size_cutoff": 1000
-    }
-  },
   "soup_config": {
     "discard_parents": false,
     "maintain_constant_population_size": true,

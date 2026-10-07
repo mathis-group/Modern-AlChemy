@@ -32,11 +32,14 @@ where
             tape_list.push(tape);
         };
 
-        // Recursive wipeout, remove `wipeout_percent` of expressions from the soup
-        let n_wipeout = wipeout(soup, config.recursive_config.wipeout_percent);
+        // Run the wipeout and repopulate for every generation except the last.
+        if i != config.recursive_config.n_generations - 1 {
+            // Recursive wipeout, remove `wipeout_percent` of expressions from the soup
+            let n_wipeout = wipeout(soup, config.recursive_config.wipeout_percent);
 
-        // And repopulate with expressions of the specified refill_type
-        let _repopulate_result = repopulate(soup, n_wipeout, &config.recursive_config)?;
+            // And repopulate with expressions of the specified refill_type
+            let _repopulate_result = repopulate(soup, n_wipeout, &config.recursive_config)?;
+        }
 
         soup.print();
         println!("");
@@ -56,8 +59,7 @@ where
     G: Generator<P> + Clone,
 {
     // Calculate how many expressions will be culled based on the wipeout percent
-    // TODO: Gotta be a better way to do this type conversion/casting/floor thing
-    let n_wipeout = (soup.expressions.len() as f64 * ((wipeout_percent as f64) / 100.0)) as usize;
+    let n_wipeout = soup.expressions.len() * wipeout_percent / 100;
 
     // Remove that many records from the soup
     soup.cull(n_wipeout);

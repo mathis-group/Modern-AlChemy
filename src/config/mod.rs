@@ -1,5 +1,7 @@
 pub mod config;
 pub mod config_seed;
+pub mod expression;
+pub mod expressions;
 pub mod generator;
 pub mod generators;
 pub mod reactor;

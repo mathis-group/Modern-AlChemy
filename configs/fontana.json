@@ -1,36 +1,37 @@
 {
-  "expression_type": "UntypedLambda",
+  "expression": {
+    "UntypedLambda": {
+      "generator": {
+        "Fontana": {
+          "seed": null,
+          "min_depth": 1,
+          "max_depth": 5,
+          "abstraction_prob_range": [
+            0.1,
+            0.5
+          ],
+          "application_prob_range": [
+            0.2,
+            0.6
+          ]
+        }
+      },
+      "reactor": {
+        "rules": [
+          "\\x.\\y.x y"
+        ],
+        "discard_copy_actions": true,
+        "discard_identity": true,
+        "discard_free_variable_expressions": true,
+        "reduction_cutoff": 500,
+        "size_cutoff": 1000
+      }
+    }
+  },
   "run_limit": 10000,
   "sample_size": 100,
   "polling_interval": null,
   "verbose_logging": false,
-  "generator_config": {
-    "Fontana": {
-      "seed": null,
-      "min_depth": 1,
-      "max_depth": 5,
-      "abstraction_prob_range": [
-        0.1,
-        0.5
-      ],
-      "application_prob_range": [
-        0.2,
-        0.6
-      ]
-    }
-  },
-  "reactor_config": {
-    "UntypedLambda": {
-      "rules": [
-        "\\x.\\y.x y"
-      ],
-      "discard_copy_actions": true,
-      "discard_identity": true,
-      "discard_free_variable_expressions": true,
-      "reduction_cutoff": 500,
-      "size_cutoff": 1000
-    }
-  },
   "soup_config": {
     "discard_parents": false,
     "maintain_constant_population_size": true,

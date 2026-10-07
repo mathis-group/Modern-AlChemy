@@ -8,7 +8,6 @@ use lambda_calculus::Term;
 use crate::config::{
     config::Config, 
     config_seed::ConfigSeed,
-    reactor::Reactor,
     generators::b_tree_gen::BTreeGen as BTreeGenConfig
 };
 

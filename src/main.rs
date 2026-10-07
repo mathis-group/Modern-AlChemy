@@ -6,7 +6,7 @@ use clap::Parser;
 
 // Package Imports
 use alchemy::config::config;
-use alchemy::enums::ExpressionType;
+use alchemy::config::expression::Expression;
 use alchemy::utils::{run_experiment, read_inputs};
 use alchemy::cli::Cli;
 use alchemy::lambda::soup::LambdaSoup;
@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
 
     let config = cli.get_config()?;
 
-    // Print to config to the console
+    // Print the config to the console
     if cli.dump_config {
         println!("{}", config.to_config_str());
         return Ok(());
@@ -40,10 +40,8 @@ fn main() -> std::io::Result<()> {
 
     // Create the soup from the configured soup type
     let mut soup = 
-        match config.expression_type {
-            ExpressionType::UntypedLambda     => LambdaSoup::from_config(&config),
-            ExpressionType::SimplyTypedLambda => todo!("typed lambda soup"),
-            ExpressionType::Haskell           => todo!("haskell soup"),
+        match &config.expression {
+            Expression::UntypedLambda(_) => LambdaSoup::from_config(&config),
         };
 
     // Generate & print n expressions from the configured generator
@@ -66,7 +64,7 @@ fn main() -> std::io::Result<()> {
         soup.seed_with_generator(config.sample_size);
     };
 
-    // Perform the recursive experiment using the soup and config to produce a recording on the `tape_list`
+    // Perform the recursive experiment using the soup and config to produce a recording on `_tapes`
     let _tapes = simulate_recursive_experiment(&mut soup, RecordingType::All, config)?;
 
     Ok(())

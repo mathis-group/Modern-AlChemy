@@ -4,7 +4,6 @@ use pyo3::prelude::*;
 // Re-export your Rust modules for the CLI and for external users
 pub mod config;
 pub mod experiments;
-pub mod enums;
 pub mod lambda;
 pub mod soupercollider;
 pub mod record;

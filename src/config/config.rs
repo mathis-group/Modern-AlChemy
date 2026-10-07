@@ -2,15 +2,15 @@
 use serde::{Deserialize, Serialize};
 
 // Package Imports
-use crate::config::{generator::Generator, reactor::Reactor, recursive::Recursive, soup::Soup};
-use crate::enums::ExpressionType;
+use crate::config::{expression::Expression, recursive::Recursive, soup::Soup};
 
 /// `Config` stores the global configuration of the program.
 #[warn(missing_docs)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    /// The type of expression the collider will be operating on
-    pub expression_type: ExpressionType,
+    /// The expression type to run, tagged, carrying its expression-specific
+    /// generator and reactor configuration.
+    pub expression: Expression,
 
     /// The number of reactions to run for this simulation. Default: `100000`.
     pub run_limit: usize,
@@ -25,14 +25,8 @@ pub struct Config {
     /// When set, print out all logs for each individual reaction. Default: `false`.
     pub verbose_logging: bool,
 
-    /// Configuration options for the random expression generator.
-    pub generator_config: Generator,
-
-    /// Configuration options for the reactor, tagged by expression type.
-    pub reactor_config: Reactor,
-
     /// Configuration options for the soup's population and dilution flux.
-    /// Shared by every reactor variant, so it sits beside `reactor_config`.
+    /// Shared by every expression type, so it sits outside `expression`.
     pub soup_config: Soup,
 
     /// Configuration options for recursive experiments
@@ -53,10 +47,8 @@ impl Config {
     /// Produce a new `Config` struct with default values.
     pub fn new() -> Self {
         Config {
-            expression_type: ExpressionType::UntypedLambda,
-            reactor_config: Reactor::new(),
+            expression: Expression::new(),
             soup_config: Soup::new(),
-            generator_config: Generator::new(),
             recursive_config: Recursive::new(),
             run_limit: 100000,
             sample_size: 1000,
@@ -68,13 +60,13 @@ impl Config {
     /// Override the reduction cutoff from the CLI.
     ///
     /// `reduction_cutoff` is a beta-reduction concept, so it only applies to
-    /// reactor variants that reduce. The match is exhaustive by construction:
+    /// expression types that reduce. The match is exhaustive by construction:
     /// adding a variant without that concept will stop this compiling, which is
     /// where the decision about what `--reduction-cutoff` should mean for it
     /// belongs.
     pub fn set_reduction_cutoff(&mut self, cutoff: usize) {
-        match &mut self.reactor_config {
-            Reactor::UntypedLambda(r) => r.reduction_cutoff = cutoff,
+        match &mut self.expression {
+            Expression::UntypedLambda(e) => e.reactor.reduction_cutoff = cutoff,
         }
     }
 
