@@ -146,13 +146,11 @@ pub struct PyReactor {
     pub(crate) inner: RustReactor,
 }
 
-// Reactor config with an optional hex seed. With no seed, the reactor picks
-// a random one, so collisions are not reproducible.
+// Reactor config with an optional hex seed. With no seed, a random one is
+// chosen here and stored, so it can be read back and the run reproduced.
 fn reactor_with_seed(seed: Option<String>) -> PyResult<RustReactor> {
     let mut cfg = RustReactor::new();
-    if seed.is_some() {
-        cfg.seed = ConfigSeed::new(parse_seed(seed)?);
-    }
+    cfg.seed = ConfigSeed::new(parse_seed(seed)?);
     Ok(cfg)
 }
 
@@ -164,6 +162,12 @@ impl PyReactor {
         Ok(PyReactor {
             inner: reactor_with_seed(seed)?,
         })
+    }
+
+    /// The seed this reactor uses, as a 64-char hex string.
+    #[getter]
+    fn seed(&self) -> String {
+        encode_hex(&self.inner.seed.get())
     }
 }
 
@@ -204,6 +208,7 @@ impl From<PyStandardization> for RustStandardization {
 #[pyclass]
 pub struct PySoup {
     inner: RustSoup,
+    seed: [u8; 32],
 }
 
 #[pymethods]
@@ -211,16 +216,28 @@ impl PySoup {
     #[new]
     #[pyo3(signature = (seed=None))]
     fn new(seed: Option<String>) -> PyResult<Self> {
+        let cfg = reactor_with_seed(seed)?;
         Ok(PySoup {
-            inner: RustSoup::from_config(&reactor_with_seed(seed)?),
+            inner: RustSoup::from_config(&cfg),
+            seed: cfg.seed.get(),
         })
     }
 
     #[staticmethod]
     fn from_config(cfg: &PyReactor) -> Self {
+        // A PyReactor always holds a resolved seed (see reactor_with_seed),
+        // so get() returns the same seed the soup is built with.
         PySoup {
             inner: RustSoup::from_config(&cfg.inner),
+            seed: cfg.inner.seed.get(),
         }
+    }
+
+    /// The seed this soup's collisions use, as a 64-char hex string.
+    /// Pass it back as `PySoup(seed=...)` to reproduce the run.
+    #[getter]
+    fn seed(&self) -> String {
+        encode_hex(&self.seed)
     }
 
     fn perturb(&mut self, expressions: Vec<String>) {
@@ -339,6 +356,12 @@ impl PyBTreeGen {
         })
     }
 
+    /// The seed this generator uses, as a 64-char hex string.
+    #[getter]
+    fn seed(&self) -> String {
+        encode_hex(&self.inner.seed())
+    }
+
     fn generate(&mut self) -> String {
         self.inner.generate().to_string()
     }
@@ -391,6 +414,12 @@ impl PyFontanaGen {
         Ok(PyFontanaGen {
             inner: RustFontanaGen::from_config(&cfg),
         })
+    }
+
+    /// The seed this generator uses, as a 64-char hex string.
+    #[getter]
+    fn seed(&self) -> String {
+        encode_hex(&self.inner.seed())
     }
 
     /// Generate a single lambda term
