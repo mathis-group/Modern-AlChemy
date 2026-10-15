@@ -101,7 +101,7 @@ where
         }
         // If we removed the parents, generate two more expressions
         // to take their place. If we don't do this the soup will drain to 0 after
-        // total_collisions / 2 time steps.
+        // sample_size / 2 time steps.
         else {
             let parent_replacements = self.generator.generate_n_particles(2);
             self.perturb(parent_replacements);
