@@ -1,11 +1,12 @@
 // Global Imports
 use std::fmt::Display;
 use std::iter::repeat_n;
+use std::sync::atomic::AtomicUsize;
 
 // Package Imports
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
 use crate::traits::{Particle, Collider, Generator};
-use crate::soupercollider::Soup;
+use crate::soupercollider::{PollingPolicy, Soup};
 use crate::record::{Tape, RecordingType};
 use crate::errors::ParsingError;
 
@@ -20,6 +21,78 @@ where
     C: Collider<P> + Clone,
     G: Generator<P> + Clone,
 {
+    run_generations(soup, recording, config, |soup, n, recording, polling| {
+        soup.simulate(n, recording, polling)
+    })
+}
+
+/// Python persistence metadata without changing the public Rust Tape shape.
+pub(crate) struct RecordedGeneration<P, C, G>
+where
+    P: Particle + Display + Clone,
+    C: Collider<P> + Clone,
+    G: Generator<P> + Clone,
+{
+    pub tape: Tape<P, C, G>,
+    pub history_collisions: Vec<usize>,
+    pub initial_population: Vec<P>,
+    pub final_population: Vec<P>,
+}
+
+pub(crate) fn simulate_recursive_experiment_recorded<P, C, G>(
+    soup: &mut Soup<P, C, G>,
+    config: Config,
+    polling_policy: PollingPolicy,
+    completed_collisions: Option<&AtomicUsize>,
+) -> Result<Vec<RecordedGeneration<P, C, G>>, ParsingError>
+where
+    P: Particle + Display + Clone,
+    C: Collider<P> + Clone,
+    G: Generator<P> + Clone,
+{
+    run_generations(
+        soup,
+        RecordingType::All,
+        config,
+        |soup, n, recording, polling| {
+            let initial_population = soup.expressions.clone();
+            let mut history_collisions = Vec::new();
+            let tape = soup.simulate_recorded(
+                n,
+                recording,
+                polling,
+                Some(&mut history_collisions),
+                polling_policy,
+                completed_collisions,
+            )?;
+            Some(RecordedGeneration {
+                tape,
+                history_collisions,
+                initial_population,
+                final_population: soup.expressions.clone(),
+            })
+        },
+    )
+}
+
+// Share the native generation/wipeout loop; only the new private path captures
+// boundaries. Existing public Rust calls keep their original allocation behavior.
+fn run_generations<P, C, G, R>(
+    soup: &mut Soup<P, C, G>,
+    recording: RecordingType,
+    config: Config,
+    mut simulate_generation: impl FnMut(
+        &mut Soup<P, C, G>,
+        usize,
+        RecordingType,
+        Option<usize>,
+    ) -> Option<R>,
+) -> Result<Vec<R>, ParsingError>
+where
+    P: Particle + Display + Clone,
+    C: Collider<P> + Clone,
+    G: Generator<P> + Clone,
+{
     // ------------- Recursive Experiment -------------
     // Setup the tape list vector to store each generations history
     let mut tape_list = Vec::new();
@@ -27,8 +100,10 @@ where
     // Iterate over each for n_generations
     for i in 0..config.recursive_config.n_generations {
         println!("Generation {i}");
-        // Run the simulation and record it to the tape list if we have it configured to do so
-        if let Some(tape) = soup.simulate(config.run_limit, recording, config.polling_interval) {
+        // Run the simulation and record it to the tape list if configured.
+        if let Some(tape) =
+            simulate_generation(soup, config.run_limit, recording, config.polling_interval)
+        {
             tape_list.push(tape);
         };
 
