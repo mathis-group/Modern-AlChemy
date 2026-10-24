@@ -27,7 +27,7 @@ The example is usage documentation, not a captured successful run.
 
 ## Contract
 
-`simulate_recursive_experiment(config_json, initial_expressions=None)` accepts
+`simulate_recursive_experiment(config_json, initial_expressions=None, *, polling_mode="legacy")` accepts
 the same JSON schema as `PyConfig.to_json()` and the CLI. `initial_expressions`
 is an optional list of expression strings, not a filename or a list of unique
 species. With no list, the function explicitly seeds `sample_size` expressions
@@ -94,6 +94,14 @@ coordinates from list indices, and use the explicit boundary populations rather
 than assume that the last polled snapshot is final. Null polling yields empty
 history/coordinates; a zero polling interval remains invalid. The legacy global
 soup collision counter and `Tape.final_state()` semantics are unchanged.
+
+For Dashboard integration, explicitly pass `polling_mode="completed"`. This
+opt-in records interval multiples and the final collision without duplicates:
+three collisions with interval two yield `[2, 3]`. The explicit initial boundary
+supplies collision zero. Null polling remains empty, and a zero-collision run
+has only its boundary population. The default `"legacy"` mode and public Rust
+APIs preserve the inherited sampling behavior. Unknown modes are rejected.
+Custom refill expressions for nonzero wipeout are parsed before simulation starts.
 
 The metadata now supplies the exact population boundaries and snapshot labels
 needed by a persistence adapter, but this change does not implement that adapter

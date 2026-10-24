@@ -5,7 +5,7 @@ use std::iter::repeat_n;
 // Package Imports
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
 use crate::traits::{Particle, Collider, Generator};
-use crate::soupercollider::Soup;
+use crate::soupercollider::{Soup, PollingPolicy};
 use crate::record::{Tape, RecordingType};
 use crate::errors::ParsingError;
 
@@ -41,6 +41,7 @@ where
 pub(crate) fn simulate_recursive_experiment_recorded<P, C, G>(
     soup: &mut Soup<P, C, G>,
     config: Config,
+    polling_policy: PollingPolicy,
 ) -> Result<Vec<RecordedGeneration<P, C, G>>, ParsingError>
 where
     P: Particle + Display + Clone,
@@ -50,7 +51,9 @@ where
     run_generations(soup, RecordingType::All, config, |soup, n, recording, polling| {
         let initial_population = soup.expressions.clone();
         let mut history_collisions = Vec::new();
-        let tape = soup.simulate_recorded(n, recording, polling, Some(&mut history_collisions))?;
+        let tape = soup.simulate_recorded(
+            n, recording, polling, Some(&mut history_collisions), polling_policy,
+        )?;
         Some(RecordedGeneration {
             tape,
             history_collisions,

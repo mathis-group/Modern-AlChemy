@@ -8,6 +8,13 @@ use crate::{traits::{Collider, Generator, Particle, Residue}};
 use crate::record::{Tape, ReactionRecord, RecordingType};
 use crate::errors::ParsingError;
 
+/// Opt-in sampling policy; existing public Rust calls retain legacy snapshots.
+#[derive(Clone, Copy)]
+pub(crate) enum PollingPolicy {
+    Legacy,
+    CompletedCollisions,
+}
+
 /// The principal AlChemy object. The `Soup` struct contains a set of
 /// lambda expressions, and rules for composing and filtering them.
 #[derive(Debug, Clone)]
@@ -40,7 +47,7 @@ where
         recording: RecordingType,
         polling_interval: Option<usize>, 
     ) -> Option<Tape<P, C, G>> {
-        self.simulate_recorded(n, recording, polling_interval, None)
+        self.simulate_recorded(n, recording, polling_interval, None, PollingPolicy::Legacy)
     }
 
     /// Internal coordinate sink; the public Tape and recording policy stay unchanged.
@@ -50,6 +57,7 @@ where
         recording: RecordingType,
         polling_interval: Option<usize>,
         mut history_collisions: Option<&mut Vec<usize>>,
+        polling_policy: PollingPolicy,
     ) -> Option<Tape<P, C, G>> {
         // Determine our recording options
         let record = recording != RecordingType::None;
@@ -68,10 +76,16 @@ where
                     reaction_record.push(reaction);
                 }
                 // If we have a polling interval, copy the entire soup every polling_interval steps
-                if record && let Some(interval) = polling_interval && (i % interval) == 0 {
-                    history.push(self.clone());
-                    if let Some(collisions) = history_collisions.as_mut() {
-                        collisions.push(i + 1);
+                if record && let Some(interval) = polling_interval {
+                    let poll_due = match polling_policy {
+                        PollingPolicy::Legacy => (i % interval) == 0,
+                        PollingPolicy::CompletedCollisions => ((i + 1) % interval) == 0,
+                    };
+                    if poll_due {
+                        history.push(self.clone());
+                        if let Some(collisions) = history_collisions.as_mut() {
+                            collisions.push(i + 1);
+                        }
                     }
                 }
             };

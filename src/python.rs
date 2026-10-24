@@ -471,11 +471,12 @@ pub struct PyGenerationResult {
 /// Run the Rust generation loop using CLI-format JSON and an optional population.
 /// History contains the native polled snapshots, not guaranteed final states.
 #[pyfunction]
-#[pyo3(signature = (config_json, initial_expressions=None))]
+#[pyo3(signature = (config_json, initial_expressions=None, *, polling_mode="legacy"))]
 fn simulate_recursive_experiment(
     py: Python<'_>,
     config_json: &str,
     initial_expressions: Option<Vec<String>>,
+    polling_mode: &str,
 ) -> PyResult<Vec<PyGenerationResult>> {
     use pyo3::exceptions::PyValueError;
 
@@ -493,6 +494,17 @@ fn simulate_recursive_experiment(
         return Err(PyValueError::new_err(
             "polling_interval must be positive or null",
         ));
+    }
+    let polling_policy = match polling_mode {
+        "legacy" => crate::soupercollider::PollingPolicy::Legacy,
+        "completed" => crate::soupercollider::PollingPolicy::CompletedCollisions,
+        _ => return Err(PyValueError::new_err("polling_mode must be legacy or completed")),
+    };
+    if config.recursive_config.wipeout_percent > 0
+        && matches!(&config.recursive_config.refill_type, crate::config::recursive::RefillType::CustomExpression)
+    {
+        parse(&config.recursive_config.repopulation_expression, Classic)
+            .map_err(|error| PyValueError::new_err(format!("Invalid refill expression: {error}")))?;
     }
     let population_size = initial_expressions
         .as_ref()
@@ -515,7 +527,7 @@ fn simulate_recursive_experiment(
         }
 
         let tapes = crate::recursive_experiment::simulate_recursive_experiment_recorded(
-            &mut soup, config,
+            &mut soup, config, polling_policy,
         )
         .map_err(|error| error.to_string())?;
 
