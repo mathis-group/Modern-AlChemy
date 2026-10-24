@@ -5,7 +5,7 @@ use std::iter::repeat_n;
 // Package Imports
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
 use crate::traits::{Particle, Collider, Generator};
-use crate::soupercollider::{Soup, PollingPolicy};
+use crate::soupercollider::{PollingPolicy, Soup};
 use crate::record::{Tape, RecordingType};
 use crate::errors::ParsingError;
 
@@ -48,19 +48,28 @@ where
     C: Collider<P> + Clone,
     G: Generator<P> + Clone,
 {
-    run_generations(soup, RecordingType::All, config, |soup, n, recording, polling| {
-        let initial_population = soup.expressions.clone();
-        let mut history_collisions = Vec::new();
-        let tape = soup.simulate_recorded(
-            n, recording, polling, Some(&mut history_collisions), polling_policy,
-        )?;
-        Some(RecordedGeneration {
-            tape,
-            history_collisions,
-            initial_population,
-            final_population: soup.expressions.clone(),
-        })
-    })
+    run_generations(
+        soup,
+        RecordingType::All,
+        config,
+        |soup, n, recording, polling| {
+            let initial_population = soup.expressions.clone();
+            let mut history_collisions = Vec::new();
+            let tape = soup.simulate_recorded(
+                n,
+                recording,
+                polling,
+                Some(&mut history_collisions),
+                polling_policy,
+            )?;
+            Some(RecordedGeneration {
+                tape,
+                history_collisions,
+                initial_population,
+                final_population: soup.expressions.clone(),
+            })
+        },
+    )
 }
 
 // Share the native generation/wipeout loop; only the new private path captures
@@ -70,7 +79,10 @@ fn run_generations<P, C, G, R>(
     recording: RecordingType,
     config: Config,
     mut simulate_generation: impl FnMut(
-        &mut Soup<P, C, G>, usize, RecordingType, Option<usize>,
+        &mut Soup<P, C, G>,
+        usize,
+        RecordingType,
+        Option<usize>,
     ) -> Option<R>,
 ) -> Result<Vec<R>, ParsingError>
 where
@@ -86,9 +98,9 @@ where
     for i in 0..config.recursive_config.n_generations {
         println!("Generation {i}");
         // Run the simulation and record it to the tape list if configured.
-        if let Some(tape) = simulate_generation(
-            soup, config.run_limit, recording, config.polling_interval,
-        ) {
+        if let Some(tape) =
+            simulate_generation(soup, config.run_limit, recording, config.polling_interval)
+        {
             tape_list.push(tape);
         };
 

@@ -498,13 +498,21 @@ fn simulate_recursive_experiment(
     let polling_policy = match polling_mode {
         "legacy" => crate::soupercollider::PollingPolicy::Legacy,
         "completed" => crate::soupercollider::PollingPolicy::CompletedCollisions,
-        _ => return Err(PyValueError::new_err("polling_mode must be legacy or completed")),
+        _ => {
+            return Err(PyValueError::new_err(
+                "polling_mode must be legacy or completed",
+            ));
+        }
     };
     if config.recursive_config.wipeout_percent > 0
-        && matches!(&config.recursive_config.refill_type, crate::config::recursive::RefillType::CustomExpression)
+        && matches!(
+            &config.recursive_config.refill_type,
+            crate::config::recursive::RefillType::CustomExpression
+        )
     {
-        parse(&config.recursive_config.repopulation_expression, Classic)
-            .map_err(|error| PyValueError::new_err(format!("Invalid refill expression: {error}")))?;
+        parse(&config.recursive_config.repopulation_expression, Classic).map_err(|error| {
+            PyValueError::new_err(format!("Invalid refill expression: {error}"))
+        })?;
     }
     let population_size = initial_expressions
         .as_ref()
@@ -527,7 +535,9 @@ fn simulate_recursive_experiment(
         }
 
         let tapes = crate::recursive_experiment::simulate_recursive_experiment_recorded(
-            &mut soup, config, polling_policy,
+            &mut soup,
+            config,
+            polling_policy,
         )
         .map_err(|error| error.to_string())?;
 
