@@ -448,6 +448,124 @@ impl PyFontanaGen {
     }
 }
 
+// ============ Recursive experiments ============
+
+/// One generation's existing native Tape, without changing its recording policy.
+#[pyclass]
+#[derive(Clone)]
+pub struct PyGenerationResult {
+    #[pyo3(get)]
+    pub generation: usize,
+    #[pyo3(get)]
+    pub history: Vec<Vec<String>>,
+    #[pyo3(get)]
+    pub history_collisions: Vec<usize>,
+    #[pyo3(get)]
+    pub initial_expressions: Vec<String>,
+    #[pyo3(get)]
+    pub final_expressions: Vec<String>,
+    #[pyo3(get)]
+    pub reactions: Vec<PyReactionRecord>,
+}
+
+/// Run the Rust generation loop using CLI-format JSON and an optional population.
+/// History contains the native polled snapshots, not guaranteed final states.
+#[pyfunction]
+#[pyo3(signature = (config_json, initial_expressions=None))]
+fn simulate_recursive_experiment(
+    py: Python<'_>,
+    config_json: &str,
+    initial_expressions: Option<Vec<String>>,
+) -> PyResult<Vec<PyGenerationResult>> {
+    use pyo3::exceptions::PyValueError;
+
+    let config: RustConfig = serde_json::from_str(config_json)
+        .map_err(|error| PyValueError::new_err(format!("Invalid experiment config: {error}")))?;
+    if config.recursive_config.n_generations == 0 {
+        return Err(PyValueError::new_err("n_generations must be at least 1"));
+    }
+    if config.recursive_config.wipeout_percent > 100 {
+        return Err(PyValueError::new_err(
+            "wipeout_percent must be between 0 and 100",
+        ));
+    }
+    if config.polling_interval == Some(0) {
+        return Err(PyValueError::new_err(
+            "polling_interval must be positive or null",
+        ));
+    }
+    let population_size = initial_expressions
+        .as_ref()
+        .map_or(config.sample_size, |expressions| expressions.len());
+    if population_size < 2 {
+        return Err(PyValueError::new_err(
+            "The initial population must contain at least 2 expressions",
+        ));
+    }
+
+    // Only owned Rust configuration/results cross this closure. No Python
+    // objects or callbacks are accessed while the GIL is released.
+    let result: Result<Vec<PyGenerationResult>, String> = py.allow_threads(move || {
+        let mut soup = RustSoup::from_config(&config);
+        match initial_expressions {
+            Some(expressions) => soup
+                .add_expressions(expressions)
+                .map_err(|error| error.to_string())?,
+            None => soup.seed_with_generator(config.sample_size),
+        }
+
+        let tapes = crate::recursive_experiment::simulate_recursive_experiment_recorded(
+            &mut soup, config,
+        )
+        .map_err(|error| error.to_string())?;
+
+        Ok(tapes
+            .into_iter()
+            .enumerate()
+            .map(|(index, generation)| {
+                let tape = generation.tape;
+                PyGenerationResult {
+                    generation: index + 1,
+                    history_collisions: generation.history_collisions,
+                    initial_expressions: generation
+                        .initial_population
+                        .into_iter()
+                        .map(|particle| particle.get_underlying_term().to_string())
+                        .collect(),
+                    final_expressions: generation
+                        .final_population
+                        .into_iter()
+                        .map(|particle| particle.get_underlying_term().to_string())
+                        .collect(),
+                    history: tape
+                        .soup_history
+                        .into_iter()
+                        .map(|snapshot| {
+                            snapshot
+                                .lambda_expressions()
+                                .map(|term| term.to_string())
+                                .collect()
+                        })
+                        .collect(),
+                    reactions: tape
+                        .reaction_record
+                        .into_iter()
+                        .map(|reaction| PyReactionRecord {
+                            step: reaction.step,
+                            left: reaction.left.to_string(),
+                            right: reaction.right.to_string(),
+                            products: reaction.products.iter().map(|p| p.to_string()).collect(),
+                            success: reaction.success,
+                            error: reaction.error,
+                        })
+                        .collect(),
+                }
+            })
+            .collect())
+    });
+    result.map_err(PyValueError::new_err)
+}
+
 // ============ Utilities ============
 
 #[allow(clippy::useless_conversion)]
@@ -469,10 +587,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyReactor>()?;
     m.add_class::<PyReactionError>()?;
     m.add_class::<PyReactionRecord>()?;
+    m.add_class::<PyGenerationResult>()?;
     m.add_class::<PyStandardization>()?;
     m.add_class::<PyBTreeGen>()?;
     m.add_class::<PyFontanaGen>()?;
     m.add_function(wrap_pyfunction!(decode_hex_py, m)?)?;
     m.add_function(wrap_pyfunction!(encode_hex_py, m)?)?;
+    m.add_function(wrap_pyfunction!(simulate_recursive_experiment, m)?)?;
     Ok(())
 }

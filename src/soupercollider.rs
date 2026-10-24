@@ -40,6 +40,17 @@ where
         recording: RecordingType,
         polling_interval: Option<usize>, 
     ) -> Option<Tape<P, C, G>> {
+        self.simulate_recorded(n, recording, polling_interval, None)
+    }
+
+    /// Internal coordinate sink; the public Tape and recording policy stay unchanged.
+    pub(crate) fn simulate_recorded(
+        &mut self,
+        n: usize,
+        recording: RecordingType,
+        polling_interval: Option<usize>,
+        mut history_collisions: Option<&mut Vec<usize>>,
+    ) -> Option<Tape<P, C, G>> {
         // Determine our recording options
         let record = recording != RecordingType::None;
 
@@ -58,7 +69,10 @@ where
                 }
                 // If we have a polling interval, copy the entire soup every polling_interval steps
                 if record && let Some(interval) = polling_interval && (i % interval) == 0 {
-                    history.push(self.clone())
+                    history.push(self.clone());
+                    if let Some(collisions) = history_collisions.as_mut() {
+                        collisions.push(i + 1);
+                    }
                 }
             };
         }
@@ -73,6 +87,9 @@ where
         // caught by the last loop of the polling interval check above.
         if let Some(interval) = polling_interval && (n % interval) != 0 {
             history.push(self.clone());
+            if let Some(collisions) = history_collisions.as_mut() {
+                collisions.push(n);
+            }
         }
 
         // Return the Tape with the soup snapshots and reaction_record
