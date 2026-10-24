@@ -1,5 +1,6 @@
 // Global Imports
 use std::fmt::{Debug, Display};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
@@ -47,7 +48,14 @@ where
         recording: RecordingType,
         polling_interval: Option<usize>, 
     ) -> Option<Tape<P, C, G>> {
-        self.simulate_recorded(n, recording, polling_interval, None, PollingPolicy::Legacy)
+        self.simulate_recorded(
+            n,
+            recording,
+            polling_interval,
+            None,
+            PollingPolicy::Legacy,
+            None,
+        )
     }
 
     /// Internal coordinate sink; the public Tape and recording policy stay unchanged.
@@ -58,6 +66,7 @@ where
         polling_interval: Option<usize>,
         mut history_collisions: Option<&mut Vec<usize>>,
         polling_policy: PollingPolicy,
+        completed_collisions: Option<&AtomicUsize>,
     ) -> Option<Tape<P, C, G>> {
         // Determine our recording options
         let record = recording != RecordingType::None;
@@ -89,6 +98,9 @@ where
                     }
                 }
             };
+            if let Some(completed) = completed_collisions {
+                completed.fetch_add(1, Ordering::Relaxed);
+            }
         }
 
         // If we weren't recording return None

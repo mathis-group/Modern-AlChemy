@@ -27,7 +27,7 @@ The example is usage documentation, not a captured successful run.
 
 ## Contract
 
-`simulate_recursive_experiment(config_json, initial_expressions=None, *, polling_mode="legacy")` accepts
+`simulate_recursive_experiment(config_json, initial_expressions=None, *, polling_mode="legacy", progress=None)` accepts
 the same JSON schema as `PyConfig.to_json()` and the CLI. `initial_expressions`
 is an optional list of expression strings, not a filename or a list of unique
 species. With no list, the function explicitly seeds `sample_size` expressions
@@ -56,7 +56,8 @@ existing public Rust recursive API and ordinary `PySoup.simulate_for` calls do
 not copy these boundary populations. The public Rust `Tape` shape and function
 signatures remain unchanged. Use small
 run limits when initially testing an integration. Native console output remains
-unchanged. This API is synchronous; it does not supply progress callbacks.
+unchanged. This API is synchronous; optional live progress is available through
+`PyExperimentProgress`, without invoking Python callbacks.
 
 Malformed JSON, invalid initial expressions, returned native parsing errors,
 zero generations, wipeout percentages outside 0..100, zero polling intervals,
@@ -65,9 +66,40 @@ This is not comprehensive validation of all existing generator/reactor settings;
 upstream engine failures are not converted into successful empty results.
 
 The native operation releases the GIL using PyO3 0.23's `Python::allow_threads`.
-The closure owns Rust configuration, expressions, and result values only; it
-does not access Python objects or invoke callbacks. Thread behavior still needs
-native verification.
+The closure owns Rust configuration, expressions, result values, and shared atomic
+progress state only; it does not access Python objects or invoke callbacks.
+
+## Live progress
+
+Create one `alchemy.PyExperimentProgress()` per active experiment and pass it as
+`progress=progress`. A separate Python thread can read its properties while the
+experiment runs:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+progress = alchemy.PyExperimentProgress()
+with ThreadPoolExecutor(max_workers=1) as executor:
+    future = executor.submit(
+        alchemy.simulate_recursive_experiment, json.dumps(config), progress=progress
+    )
+    # A web status handler can read this same object while future is pending.
+    print(progress.completed_collisions, progress.running)
+    generations = future.result()
+```
+
+`completed_collisions` counts completed collision attempts, including unsuccessful
+reactions, across all generations. It starts at zero and resets before native work
+begins. Configuration validation errors before the run starts leave the previous
+observations unchanged.
+The expected total is `run_limit * recursive_config.n_generations`; a zero-collision
+run completes at zero. This counter is independent of the inherited soup
+`n_collisions` field and polling cadence. `running` stays true through native
+simulation and conversion of the results, and resets on success or a raised native
+error. Reusing one progress object for overlapping runs raises `ValueError`; separate
+objects can be used independently. The properties are read-only observations, not
+a cancellation API. The call's returned value or exception is authoritative for
+success; `running == False` alone also describes a failed or not-yet-started run.
 
 ## Dashboard integration boundary
 
@@ -124,4 +156,7 @@ wipeout/refill transition, disabled polling, and invalid inputs. Boundary tests
 add deterministic growing populations, divisor/non-divisor snapshot coordinates,
 zero collisions, and exact pre/post-wipeout populations. They must fail
 at import when the native extension is unavailable; an import failure is not a
-regression result.
+regression result. Progress tests cover aggregate counts, unsuccessful reactions,
+zero-collision reuse, cleanup after a parsing failure, and a bounded subprocess
+that reads intermediate progress from another Python thread during real native
+collisions and rejects overlapping reuse of the same progress object.

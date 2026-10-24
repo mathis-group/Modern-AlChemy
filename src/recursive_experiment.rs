@@ -1,6 +1,7 @@
 // Global Imports
 use std::fmt::Display;
 use std::iter::repeat_n;
+use std::sync::atomic::AtomicUsize;
 
 // Package Imports
 use crate::config::{config::Config, recursive::{Recursive, RefillType}};
@@ -42,6 +43,7 @@ pub(crate) fn simulate_recursive_experiment_recorded<P, C, G>(
     soup: &mut Soup<P, C, G>,
     config: Config,
     polling_policy: PollingPolicy,
+    completed_collisions: Option<&AtomicUsize>,
 ) -> Result<Vec<RecordedGeneration<P, C, G>>, ParsingError>
 where
     P: Particle + Display + Clone,
@@ -61,6 +63,7 @@ where
                 polling,
                 Some(&mut history_collisions),
                 polling_policy,
+                completed_collisions,
             )?;
             Some(RecordedGeneration {
                 tape,

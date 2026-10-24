@@ -3,6 +3,10 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+};
 
 use lambda_calculus::{parse, term::Notation::Classic};
 
@@ -450,6 +454,46 @@ impl PyFontanaGen {
 
 // ============ Recursive experiments ============
 
+#[derive(Default)]
+struct ExperimentProgress {
+    completed_collisions: AtomicUsize,
+    running: AtomicBool,
+}
+
+/// A per-run counter that remains readable while native code releases the GIL.
+#[pyclass(frozen)]
+#[derive(Default)]
+pub struct PyExperimentProgress {
+    inner: Arc<ExperimentProgress>,
+}
+
+#[pymethods]
+impl PyExperimentProgress {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+
+    #[getter]
+    fn completed_collisions(&self) -> usize {
+        self.inner.completed_collisions.load(Ordering::Relaxed)
+    }
+
+    #[getter]
+    fn running(&self) -> bool {
+        self.inner.running.load(Ordering::Acquire)
+    }
+}
+
+// Release the busy flag on both returned errors and native stack unwinding.
+struct ProgressRun(Arc<ExperimentProgress>);
+
+impl Drop for ProgressRun {
+    fn drop(&mut self) {
+        self.0.running.store(false, Ordering::Release);
+    }
+}
+
 /// One generation's existing native Tape, without changing its recording policy.
 #[pyclass]
 #[derive(Clone)]
@@ -471,12 +515,13 @@ pub struct PyGenerationResult {
 /// Run the Rust generation loop using CLI-format JSON and an optional population.
 /// History contains the native polled snapshots, not guaranteed final states.
 #[pyfunction]
-#[pyo3(signature = (config_json, initial_expressions=None, *, polling_mode="legacy"))]
+#[pyo3(signature = (config_json, initial_expressions=None, *, polling_mode="legacy", progress=None))]
 fn simulate_recursive_experiment(
     py: Python<'_>,
     config_json: &str,
     initial_expressions: Option<Vec<String>>,
     polling_mode: &str,
+    progress: Option<PyRef<'_, PyExperimentProgress>>,
 ) -> PyResult<Vec<PyGenerationResult>> {
     use pyo3::exceptions::PyValueError;
 
@@ -523,9 +568,29 @@ fn simulate_recursive_experiment(
         ));
     }
 
+    let progress_run = progress
+        .as_ref()
+        .map(|progress| {
+            progress
+                .inner
+                .running
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .map_err(|_| {
+                    PyValueError::new_err("Progress is already in use by a running experiment")
+                })?;
+            progress
+                .inner
+                .completed_collisions
+                .store(0, Ordering::Relaxed);
+            Ok::<_, PyErr>(ProgressRun(Arc::clone(&progress.inner)))
+        })
+        .transpose()?;
+    drop(progress);
+
     // Only owned Rust configuration/results cross this closure. No Python
     // objects or callbacks are accessed while the GIL is released.
     let result: Result<Vec<PyGenerationResult>, String> = py.allow_threads(move || {
+        let progress_guard = progress_run;
         let mut soup = RustSoup::from_config(&config);
         match initial_expressions {
             Some(expressions) => soup
@@ -538,6 +603,9 @@ fn simulate_recursive_experiment(
             &mut soup,
             config,
             polling_policy,
+            progress_guard
+                .as_ref()
+                .map(|run| &run.0.completed_collisions),
         )
         .map_err(|error| error.to_string())?;
 
@@ -610,6 +678,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyReactionError>()?;
     m.add_class::<PyReactionRecord>()?;
     m.add_class::<PyGenerationResult>()?;
+    m.add_class::<PyExperimentProgress>()?;
     m.add_class::<PyStandardization>()?;
     m.add_class::<PyBTreeGen>()?;
     m.add_class::<PyFontanaGen>()?;
