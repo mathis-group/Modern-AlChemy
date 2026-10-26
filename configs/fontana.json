@@ -13,7 +13,12 @@
           "application_prob_range": [
             0.2,
             0.6
-          ]
+          ],
+          "freevar_generation_probability": 0.0,
+          "n_max_free_vars": 0,
+          "reduce_to_normal_form": false,
+          "reduction_cutoff": 500,
+          "size_cutoff": 1000
         }
       },
       "reactor": {

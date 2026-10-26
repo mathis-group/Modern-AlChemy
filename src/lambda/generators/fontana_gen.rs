@@ -8,6 +8,10 @@ use rand_chacha::ChaCha8Rng;
 use crate::config::generators::fontana_gen::FontanaGen as FontanaGenConfig;
 use crate::traits::Generator;
 use crate::lambda::particle::LambdaParticle;
+use crate::lambda::utils::{close_free_variables, reduce_to_normal_form};
+
+/// Consecutive failed reductions allowed before generation gives up
+const MAX_NORMAL_FORM_ATTEMPTS: usize = 10_000;
 
 #[derive(Debug, Clone)]
 pub struct FontanaGen {
@@ -17,6 +21,11 @@ pub struct FontanaGen {
     app_prob: (f32, f32),
     abs_incr: f32,
     app_incr: f32,
+    freevar_prob: f64,
+    max_free_vars: u32,
+    reduce_to_normal_form: bool,
+    reduction_cutoff: usize,
+    size_cutoff: usize,
     seed: [u8; 32],
     rng: ChaCha8Rng,
 }
@@ -39,6 +48,11 @@ impl FontanaGen {
         mut max_depth: u32,
         mut abs_prob: (f32, f32),
         mut app_prob: (f32, f32),
+        freevar_prob: f64,
+        max_free_vars: u32,
+        reduce_to_normal_form: bool,
+        reduction_cutoff: usize,
+        size_cutoff: usize,
         seed: [u8; 32],
     ) -> FontanaGen {
         max_depth = max_depth.max(1);
@@ -58,6 +72,11 @@ impl FontanaGen {
             app_prob,
             abs_incr,
             app_incr,
+            freevar_prob: freevar_prob.clamp(0.0, 1.0),
+            max_free_vars,
+            reduce_to_normal_form,
+            reduction_cutoff,
+            size_cutoff,
             seed,
             rng: ChaCha8Rng::from_seed(seed),
         }
@@ -77,12 +96,39 @@ impl FontanaGen {
                 cfg.application_prob_range.0 as f32,
                 cfg.application_prob_range.1 as f32,
             ),
+            cfg.freevar_generation_probability,
+            cfg.n_max_free_vars,
+            cfg.reduce_to_normal_form,
+            cfg.reduction_cutoff,
+            cfg.size_cutoff,
             seed,
         )
     }
 
     pub fn generate(&mut self) -> Term {
-        self.rand_lambda(0, 0, self.abs_prob.0, self.app_prob.0)
+        if !self.reduce_to_normal_form {
+            return self.generate_unreduced();
+        }
+        for _ in 0..MAX_NORMAL_FORM_ATTEMPTS {
+            let mut expr = self.generate_unreduced();
+            if reduce_to_normal_form(&mut expr, self.reduction_cutoff, self.size_cutoff).is_ok() {
+                return expr;
+            }
+        }
+        panic!(
+            "{MAX_NORMAL_FORM_ATTEMPTS} generated expressions in a row failed to reduce to normal \
+             form within reduction_cutoff {} and size_cutoff {}; check the generator configuration",
+            self.reduction_cutoff, self.size_cutoff
+        );
+    }
+
+    fn generate_unreduced(&mut self) -> Term {
+        let expr = self.rand_lambda(0, 0, self.abs_prob.0, self.app_prob.0);
+        if self.max_free_vars > 0 {
+            close_free_variables(expr)
+        } else {
+            expr
+        }
     }
 
     pub fn generate_n(&mut self, n: usize) -> Vec<Term> {
@@ -113,9 +159,12 @@ impl FontanaGen {
     }
 
     pub fn rand_lambda(&mut self, depth: u32, abs_depth: u32, p_abs: f32, p_app: f32) -> Term {
+        // A variable needs an abstraction above it to bind it, unless free variables are on
+        let can_sample_variable = abs_depth > 0 || self.max_free_vars > 0;
+
         // Terminal case: max depth reached
         if depth >= self.max_depth {
-            if abs_depth > 0 {
+            if can_sample_variable {
                 return self.sample_variable(abs_depth);
             }
             return Term::Abs(Box::new(Term::Var(1)));
@@ -136,8 +185,8 @@ impl FontanaGen {
             )));
         }
 
-        // Below min_depth or no binders: can't emit Var, must pick Abs or App
-        if abs_depth == 0 || depth < self.min_depth {
+        // Below min_depth or no variable possible: must pick Abs or App
+        if !can_sample_variable || depth < self.min_depth {
             return Term::App(Box::new((
                 self.rand_lambda(depth + 1, abs_depth, next_abs, next_app),
                 self.rand_lambda(depth + 1, abs_depth, next_abs, next_app),
@@ -154,12 +203,18 @@ impl FontanaGen {
         self.sample_variable(abs_depth)
     }
 
+    /// Pick a variable: a free one (a De Bruijn index above `abs_depth`) or one bound by
+    /// one of the `abs_depth` abstractions above
     fn sample_variable(&mut self, abs_depth: u32) -> Term {
-        debug_assert!(
-            abs_depth > 0,
-            "sample_variable called with no enclosing abstractions"
-        );
-        Term::Var(self.rng.gen_range(1..=abs_depth) as usize)
+        // The free/bound coin is only flipped when free variables are on, so with them off
+        // a given seed generates the same expressions as before they existed
+        let free = self.max_free_vars > 0 && (abs_depth == 0 || self.rng.gen_bool(self.freevar_prob));
+        if free {
+            Term::Var((abs_depth + self.rng.gen_range(1..=self.max_free_vars)) as usize)
+        } else {
+            debug_assert!(abs_depth > 0, "bound variable requested with no enclosing abstractions");
+            Term::Var(self.rng.gen_range(1..=abs_depth) as usize)
+        }
     }
 
     fn clamp_probabilities(p_abs: f32, p_app: f32) -> (f32, f32) {
