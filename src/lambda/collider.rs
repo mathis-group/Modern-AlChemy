@@ -6,7 +6,7 @@ use crate::config::reactors::untyped_lambda::UntypedLambdaReactor;
 use crate::traits::Collider;
 use crate::lambda::particle::LambdaParticle;
 use crate::lambda::result::{LambdaCollisionOk, LambdaCollisionError};
-use crate::lambda::utils::{has_two_args, uses_both_arguments, is_truthy, reduce_with_limit};
+use crate::lambda::utils::{has_two_args, uses_both_arguments, is_truthy, reduce_with_limit, reduce_to_normal_form};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LambdaCollider {
@@ -88,12 +88,8 @@ impl LambdaCollider {
 
         for rule in &self.reaction_rules {
             let mut expr = app!(rule.clone(), lt.clone(), rt.clone());
-            let n = reduce_with_limit(&mut expr, self.rlimit, self.slimit)?;
+            let n = reduce_to_normal_form(&mut expr, self.rlimit, self.slimit)?;
             let size = expr.size();
-
-            if n == self.rlimit {
-                return Err(LambdaCollisionError::ExceedsReductionLimit);
-            }
 
             let identity = abs(Var(1));
             if expr.is_isomorphic_to(&identity) && self.discard_identity {

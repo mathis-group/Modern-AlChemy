@@ -400,15 +400,22 @@ pub struct PyFontanaGen {
 #[pymethods]
 impl PyFontanaGen {
     /// Build a Fontana generator from config values.
-    /// No free variable parameters — FontanaGen only produces closed terms.
+    /// Free variables are off unless `max_free_vars > 0`; generated terms are always closed
     #[staticmethod]
-    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, seed=None))]
+    #[pyo3(signature = (abs_range, app_range, min_depth, max_depth, seed=None,
+                        freevar_generation_probability=0.0, max_free_vars=0,
+                        reduce_to_normal_form=false, reduction_cutoff=500, size_cutoff=1000))]
     pub fn from_config(
         abs_range: (f64, f64),
         app_range: (f64, f64),
         min_depth: u32,
         max_depth: u32,
         seed: Option<String>,
+        freevar_generation_probability: f64,
+        max_free_vars: u32,
+        reduce_to_normal_form: bool,
+        reduction_cutoff: usize,
+        size_cutoff: usize,
     ) -> PyResult<Self> {
         let seed_bytes = parse_seed(seed)?;
 
@@ -417,6 +424,11 @@ impl PyFontanaGen {
             application_prob_range: app_range,
             min_depth,
             max_depth,
+            freevar_generation_probability,
+            max_free_vars,
+            reduce_to_normal_form,
+            reduction_cutoff,
+            size_cutoff,
             seed: ConfigSeed::new(seed_bytes),
         };
         Ok(PyFontanaGen {
