@@ -1,4 +1,4 @@
-*Logical collapse: one simulate, associated types, generic soup*
+# Logical collapse: one simulate, associated types, generic soup
 
 **Labels:** `decision-record` `architecture` `rust-core`
 **Status:** Implemented on `refac/generator-abstraction`

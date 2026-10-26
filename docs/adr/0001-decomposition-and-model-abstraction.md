@@ -1,4 +1,4 @@
-*Structural refactor: module decomposition and the abstraction seam*
+# Structural refactor: module decomposition and the abstraction seam
 
 **Labels:** `decision-record` `architecture` `rust-core`
 **Status:** Implemented on `refac/generator-abstraction`
