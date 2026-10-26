@@ -97,7 +97,7 @@ impl FontanaGen {
                 cfg.application_prob_range.1 as f32,
             ),
             cfg.freevar_generation_probability,
-            cfg.n_max_free_vars,
+            cfg.max_free_vars,
             cfg.reduce_to_normal_form,
             cfg.reduction_cutoff,
             cfg.size_cutoff,

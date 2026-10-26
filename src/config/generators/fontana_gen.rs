@@ -34,7 +34,7 @@ pub struct FontanaGen {
     /// Size of the free variable pool, bound after generation. `0` turns free variables off;
     /// use with `min_depth >= 1`
     #[serde(default)]
-    pub n_max_free_vars: u32,
+    pub max_free_vars: u32,
 
     /// Reduce generated expressions to normal form, regenerating any that exceed the cutoffs
     #[serde(default)]
@@ -58,7 +58,7 @@ impl GenConfig for FontanaGen {
             application_prob_range: (0.5, 0.3),
             abstraction_prob_range: (0.3, 0.5),
             freevar_generation_probability: 0.0,
-            n_max_free_vars: 0,
+            max_free_vars: 0,
             reduce_to_normal_form: false,
             reduction_cutoff: 500,
             size_cutoff: 1000,

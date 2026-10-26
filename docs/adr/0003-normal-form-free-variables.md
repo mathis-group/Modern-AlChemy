@@ -51,9 +51,9 @@ forever.
   leaves `LambdaGenerator`, `LambdaSoup` and the experiments untouched.
 
 **2. Free variables in FontanaGen, using BTree's two settings.**
-New config fields: `freevar_generation_probability` and `n_max_free_vars`.
+New config fields: `freevar_generation_probability` and `max_free_vars`.
 
-- When a variable is generated, it comes from a pool of `n_max_free_vars` free variables
+- When a variable is generated, it comes from a pool of `max_free_vars` free variables
   with probability `freevar_generation_probability`. Otherwise it is bound by one of the
   abstractions above. With no abstraction above, it always comes from the pool.
 - After generation, `lambda::utils::close_free_variables` adds one outer abstraction per
@@ -93,7 +93,7 @@ Soups were run with the library's own soup and collider and `default/config.json
 used, both with `min_depth 3`, `max_depth 20`: `p_abs 0.6, p_app 0.15` and
 `p_abs 0.5, p_app 0.25`.
 
-Normal form plus free variables (`freevar_generation_probability 0.25`, `n_max_free_vars 6`)
+Normal form plus free variables (`freevar_generation_probability 0.25`, `max_free_vars 6`)
 compared with the previous generator seeding unreduced:
 
 | | Previous generator | Normal form + free variables |
@@ -147,7 +147,7 @@ Behaviour was also checked directly:
 ## Follow-ups
 
 - **A config for the chosen settings:** `min_depth 3`, free variables on, reduction on.
-- **Sweeps:** `min_depth` (1–3), `freevar_generation_probability` and `n_max_free_vars`,
+- **Sweeps:** `min_depth` (1–3), `freevar_generation_probability` and `max_free_vars`,
   measured in soups.
 - **The recursive experiment:** run it with normal-form refills.
 - **The `\x.\y.y` collapse:** investigate it under the default reaction rule with

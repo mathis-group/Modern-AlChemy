@@ -425,7 +425,7 @@ impl PyFontanaGen {
             min_depth,
             max_depth,
             freevar_generation_probability,
-            n_max_free_vars: max_free_vars,
+            max_free_vars,
             reduce_to_normal_form,
             reduction_cutoff,
             size_cutoff,
